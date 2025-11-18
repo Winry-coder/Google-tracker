@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("TURSO_DATABASE_URL")
+}
+
+// ============================================
+// USER MODEL
+// ============================================
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  hasAccess       Boolean   @default(false)
+  role            String    @default("viewer") // viewer | editor | admin
+
+  // Google-specific fields
+  googleId        String?   @unique
+  googleEmail     String?   // Original email from Google (before normalization)
+  drivePermissionId String? // Google Drive permission ID
+
+  // Metadata
+  source          String    @default("manual") // "drive" | "manual" | "imported"
+  status          String    @default("active") // "active" | "suspended" | "revoked"
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastSyncedAt    DateTime?
+  revokedAt       DateTime?
+  lastAccessAt    DateTime?
+
+  // Relations
+  syncLogs        SyncLog[]
+  auditLogs       AuditLog[]
+
+  @@index([email])
+  @@index([googleId])
+  @@index([source])
+  @@index([status])
+  @@index([hasAccess])
+}
+
+// ============================================
+// SYNC LOG MODEL
+// ============================================
+model SyncLog {
+  id              String    @id @default(cuid())
+
+  // Sync metadata
+  syncType        String    // "manual" | "scheduled" | "webhook"
+  status          String    // "success" | "partial" | "failed"
+
+  // Results
+  usersCreated    Int       @default(0)
+  usersUpdated    Int       @default(0)
+  usersRevoked    Int       @default(0)
+  errorsCount     Int       @default(0)
+
+  // Details
+  driveUserCount  Int?      // Total users in Drive folder
+  appUserCount    Int?      // Total users in app
+  duration        Int?      // Duration in milliseconds
+
+  // Error tracking
+  errorMessage    String?
+  errorStack      String?
+
+  // Timestamps
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  // Relations
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([syncType])
+  @@index([startedAt])
+}
+
+// ============================================
+// AUDIT LOG MODEL
+// ============================================
+model AuditLog {
+  id              String    @id @default(cuid())
+
+  // Event details
+  eventType       String    // "user.created" | "user.updated" | "access.granted" | "access.revoked"
+  eventSource     String    // "drive_sync" | "admin_action" | "api"
+
+  // Changes
+  oldValue        String?   // JSON string of old state
+  newValue        String?   // JSON string of new state
+
+  // Actor
+  performedBy     String?   // User ID or "system"
+  performedByEmail String?
+
+  // Context
+  metadata        String?   // JSON string for additional context
+  ipAddress       String?
+  userAgent       String?
+
+  // Timestamp
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ============================================
+// SYNC CONFIG MODEL (OPTIONAL)
+// ============================================
+model SyncConfig {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  value           String
+  description     String?
+  updatedAt       DateTime  @updatedAt
+
+  @@index([key])
+}
