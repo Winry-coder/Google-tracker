@@ -15,26 +15,24 @@ export function SyncButton(): JSX.Element {
     triggerSync(undefined, {
       onSuccess: (data) => {
         toast({
-          title: 'Sync Completed',
-          description: `Created: ${data.created.length}, Updated: ${data.updated.length}, Revoked: ${data.revoked.length}`,
+          title: '✓ Sync completed successfully',
+          description: `Created ${data.created.length} • Updated ${data.updated.length} • Revoked ${data.revoked.length}`,
         });
       },
       onError: (error) => {
         toast({
           variant: 'destructive',
-          title: 'Sync Failed',
+          title: '✗ Sync failed',
           description:
-            error instanceof Error ? error.message : 'An error occurred',
+            error instanceof Error ? error.message : 'An unexpected error occurred',
         });
       },
     });
   };
 
   return (
-    <Button onClick={handleSync} disabled={isSyncing}>
-      <RefreshCw
-        className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
-      />
+    <Button onClick={handleSync} disabled={isSyncing} className="gap-2">
+      <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
       {isSyncing ? 'Syncing...' : 'Sync Now'}
     </Button>
   );
