@@ -38,7 +38,11 @@ export async function GET(request: Request) {
     const results = [];
     for (const campaign of campaigns) {
       try {
-        const result = await runDriveSync(campaign.folderId, campaign.id);
+        const result = await runDriveSync(
+          campaign.folderId,
+          campaign.id,
+          campaign.ownerId || undefined
+        );
 
         // Update campaign stats
         await prisma.campaign.update({

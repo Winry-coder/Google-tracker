@@ -22,7 +22,8 @@ import { acquireSyncLock, releaseSyncLock } from './lock';
  */
 export async function runDriveSync(
   folderId: string,
-  campaignId?: string
+  campaignId?: string,
+  userId?: string
 ): Promise<SyncResult> {
   const startTime = Date.now();
 
@@ -38,7 +39,7 @@ export async function runDriveSync(
     // ============================================
     // STAGE 1 & 2: FETCH AND MAP
     // ============================================
-    const mappedUsers = await fetchDriveUsers(folderId);
+    const mappedUsers = await fetchDriveUsers(folderId, userId);
     const driveEmails = createEmailSet(mappedUsers);
 
     // ============================================

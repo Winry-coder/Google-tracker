@@ -1,4 +1,7 @@
-import { fetchAllPermissionsPaginated } from '@/lib/google/drive';
+import {
+  fetchAllPermissionsPaginated,
+  fetchAllPermissionsForUser,
+} from '@/lib/google/drive';
 import {
   shouldProcessPermission,
   deduplicatePermissions,
@@ -10,8 +13,13 @@ import type { MappedUser } from '@/types/sync';
  * Fetches and processes Drive permissions into MappedUser format
  * Stage 1 & 2: FETCH and MAP
  */
-export async function fetchDriveUsers(folderId: string): Promise<MappedUser[]> {
-  const permissions = await fetchAllPermissionsPaginated(folderId);
+export async function fetchDriveUsers(
+  folderId: string,
+  userId?: string
+): Promise<MappedUser[]> {
+  const permissions = userId
+    ? await fetchAllPermissionsForUser(userId, folderId)
+    : await fetchAllPermissionsPaginated(folderId);
 
   const filteredPermissions = permissions.filter(shouldProcessPermission);
 
