@@ -21,6 +21,13 @@ export async function GET(
   try {
     const user = await prisma.user.findUnique({
       where: { id: params.id },
+      include: {
+        campaign: true,
+        auditLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        },
+      },
     });
 
     if (!user) {
@@ -37,7 +44,7 @@ export async function GET(
       success: true,
       data: user,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
@@ -80,7 +87,7 @@ export async function PATCH(
       data: user,
       message: 'User updated successfully',
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
@@ -109,7 +116,7 @@ export async function DELETE(
       data: null,
       message: 'User deleted successfully',
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,

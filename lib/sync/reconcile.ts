@@ -8,15 +8,31 @@ import { normalizeEmail } from '@/lib/utils/format';
 import type { SyncResult, MappedUser } from '@/types/sync';
 import type { User } from '@/types/user';
 
+import { acquireSyncLock, releaseSyncLock } from './lock';
+
 /**
  * 4-STAGE SYNC PIPELINE
  * Stage 1: FETCH - Get Drive permissions
  * Stage 2: MAP - Normalize to internal format
  * Stage 3: RECONCILE - Determine actions (create/update/revoke)
  * Stage 4: PERSIST - Execute database operations
+ *
+ * @param folderId - Google Drive folder ID to sync
+ * @param campaignId - Optional campaign ID to tag users with
  */
-export async function runDriveSync(folderId: string): Promise<SyncResult> {
+export async function runDriveSync(
+  folderId: string,
+  campaignId?: string
+): Promise<SyncResult> {
   const startTime = Date.now();
+
+  // Acquire lock
+  const lockAcquired = await acquireSyncLock();
+  if (!lockAcquired) {
+    throw new Error(
+      'Another sync operation is currently in progress. Please wait.'
+    );
+  }
 
   try {
     // ============================================
@@ -30,10 +46,7 @@ export async function runDriveSync(folderId: string): Promise<SyncResult> {
     // ============================================
     const existingUsers = await prisma.user.findMany({
       where: {
-        OR: [
-          { email: { in: Array.from(driveEmails) } },
-          { source: 'drive' },
-        ],
+        OR: [{ email: { in: Array.from(driveEmails) } }, { source: 'drive' }],
       },
     });
 
@@ -75,11 +88,14 @@ export async function runDriveSync(folderId: string): Promise<SyncResult> {
       mappedUsersCount: mappedUsers.length,
       existingUsersCount: existingUsers.length,
       startTime,
+      campaignId, // Pass campaign ID to persist function
     });
   } catch (error) {
     const duration = Date.now() - startTime;
     await logSyncFailure(error as Error, duration);
     throw error;
+  } finally {
+    await releaseSyncLock();
   }
 }
 
@@ -91,13 +107,22 @@ async function persistChanges(params: {
   mappedUsersCount: number;
   existingUsersCount: number;
   startTime: number;
+  campaignId?: string;
 }): Promise<SyncResult> {
-  const { toCreate, toUpdate, toRevoke, mappedUsersCount, existingUsersCount, startTime } = params;
+  const {
+    toCreate,
+    toUpdate,
+    toRevoke,
+    mappedUsersCount,
+    existingUsersCount,
+    startTime,
+    campaignId,
+  } = params;
 
   // ============================================
   // STAGE 4: PERSIST CHANGES
   // ============================================
-  const created = await createUsers(toCreate);
+  const created = await createUsers(toCreate, campaignId);
   const updated = await updateUsers(toUpdate);
   const revoked = await revokeUsers(toRevoke);
 

@@ -64,6 +64,7 @@ export function mapDrivePermissionToUser(
     googleEmail: permission.emailAddress,
     drivePermissionId: permission.id,
     role: defaultRole,
+    image: permission.photoLink || undefined,
   };
 }
 

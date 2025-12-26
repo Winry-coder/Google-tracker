@@ -19,6 +19,10 @@ export function determineUpdates(
     updates.name = mapped.name;
   }
 
+  if (existing.image !== mapped.image && mapped.image) {
+    updates.image = mapped.image;
+  }
+
   if (existing.googleId !== mapped.googleId) {
     updates.googleId = mapped.googleId;
   }
@@ -60,7 +64,10 @@ export async function updateUsers(
 
       updated.push(updatedUser);
     } catch (error) {
-      console.error(`Failed to update user ${user.email}:`, error);
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to update user ${user.email}:`, error);
+      }
     }
   }
 

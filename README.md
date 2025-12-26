@@ -61,6 +61,7 @@ A production-ready Next.js application that automatically synchronizes Google Dr
 See the **Implementation Checklist** section in `claude.md` for detailed tasks.
 
 **High Priority:**
+
 1. Install dependencies: `pnpm install`
 2. Configure .env file (see Setup section below)
 3. Run database migrations
@@ -107,6 +108,7 @@ cp .env.example .env
 Fill in all the TODO fields in `.env`. See `.env.example` for detailed instructions on how to obtain each credential.
 
 **Critical Environment Variables:**
+
 - `GOOGLE_CLIENT_ID` - From Google Cloud Console
 - `GOOGLE_CLIENT_SECRET` - From Google Cloud Console
 - `GOOGLE_REDIRECT_URI` - OAuth callback URL
@@ -409,6 +411,7 @@ pnpm prisma db pull
 ### "Tests timing out"
 
 Increase timeout in test file:
+
 ```typescript
 test.setTimeout(60000); // 60 seconds
 ```
@@ -460,6 +463,7 @@ Private project - All rights reserved
 ## 🤝 Contributing
 
 Follow the guidelines in `claude.md` for:
+
 - Git workflow (branch naming, commit messages)
 - Code quality rules (TypeScript strict, function size)
 - Testing requirements (80%+ coverage)

@@ -29,7 +29,7 @@ export function initTracer(config?: TracerConfig): void {
   console.log(`Tracer initialized for service: ${serviceName}`);
 }
 
-export function getTracer(name: string): {
+export function getTracer(_name: string): {
   startSpan: (spanName: string) => SpanMock;
 } {
   return {
@@ -38,7 +38,7 @@ export function getTracer(name: string): {
 }
 
 class SpanMock {
-  constructor(private name: string) {}
+  constructor(_name: string) {}
 
   addEvent(_event: string, _attributes?: Record<string, unknown>): void {
     // Mock implementation

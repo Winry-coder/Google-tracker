@@ -26,17 +26,25 @@ test.describe('Dashboard', () => {
       page.getByRole('heading', { name: /getting started/i })
     ).toBeVisible();
 
-    await expect(
-      page.getByText(/configure your .env file/i)
-    ).toBeVisible();
+    await expect(page.getByText(/configure your .env file/i)).toBeVisible();
   });
 
   test('should display users table with headers', async ({ page }) => {
-    await expect(page.getByRole('columnheader', { name: /email/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /name/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /status/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /source/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /last synced/i })).toBeVisible();
+    await expect(
+      page.getByRole('columnheader', { name: /email/i })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('columnheader', { name: /name/i })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('columnheader', { name: /status/i })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('columnheader', { name: /source/i })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('columnheader', { name: /last synced/i })
+    ).toBeVisible();
   });
 
   test('should display empty state message when no users', async ({ page }) => {

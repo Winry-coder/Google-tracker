@@ -15,6 +15,7 @@ export const createUserSchema = z.object({
   googleId: z.string().optional(),
   googleEmail: z.string().email().optional(),
   drivePermissionId: z.string().optional(),
+  campaignId: z.string().optional(),
 });
 
 export const updateUserSchema = z.object({

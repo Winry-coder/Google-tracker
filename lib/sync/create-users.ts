@@ -5,9 +5,12 @@ import type { MappedUser } from '@/types/sync';
 /**
  * Creates new users in the database from Drive permissions
  * Returns array of created users
+ * @param usersToCreate - Array of mapped users from Drive
+ * @param campaignId - Optional campaign ID to tag users with
  */
 export async function createUsers(
-  usersToCreate: MappedUser[]
+  usersToCreate: MappedUser[],
+  campaignId?: string
 ): Promise<User[]> {
   if (usersToCreate.length === 0) return [];
 
@@ -19,6 +22,7 @@ export async function createUsers(
         data: {
           email: mappedUser.email,
           name: mappedUser.name,
+          image: mappedUser.image,
           hasAccess: true,
           role: mappedUser.role,
           source: 'drive',
@@ -27,6 +31,7 @@ export async function createUsers(
           googleEmail: mappedUser.googleEmail,
           drivePermissionId: mappedUser.drivePermissionId,
           lastSyncedAt: new Date(),
+          ...(campaignId && { campaignId }), // Add campaign ID if provided
         },
       });
 
@@ -40,9 +45,19 @@ export async function createUsers(
         },
       });
 
+      // Trigger Phase 4 Automation (Fire and forget)
+      import('@/lib/automation/process-lead').then(
+        ({ processLeadAutomation }) => {
+          processLeadAutomation(user, campaignId).catch(() => {});
+        }
+      );
+
       created.push(user);
     } catch (error) {
-      console.error(`Failed to create user ${mappedUser.email}:`, error);
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to create user ${mappedUser.email}:`, error);
+      }
     }
   }
 

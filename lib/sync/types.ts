@@ -1,1 +1,6 @@
-export type { SyncResult, SyncError, MappedUser, SyncLogData } from '@/types/sync';
+export type {
+  SyncResult,
+  SyncError,
+  MappedUser,
+  SyncLogData,
+} from '@/types/sync';

@@ -1,0 +1,135 @@
+﻿
+> drive-sync-dashboard@0.1.0 lint C:\Users\LENOVO T14\Code\Google drive access tracker full stack application\seyi_stuff_1
+> next lint
+
+node.exe : 
+At C:\Users\LENOVO T14\AppDa
+ta\Roaming\npm\pnpm.ps1:24 
+char:5
++     & "node$exe"  "$basedi
+r/node_modules/pnpm/bin/pnpm
+.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: (:Stri  
+  ng) [], RemoteException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+./app/access/request/page.ts
+x
+37:14  Error: 'err' is 
+defined but never used.  @ty
+pescript-eslint/no-unused-va
+rs
+61:51  Error: `'` can be 
+escaped with `&apos;`, 
+`&lsquo;`, `&#39;`, 
+`&rsquo;`.  
+react/no-unescaped-entities
+161:55  Error: `'` can be 
+escaped with `&apos;`, 
+`&lsquo;`, `&#39;`, 
+`&rsquo;`.  
+react/no-unescaped-entities
+
+./app/api/access/grant-test/
+route.ts
+68:41  Warning: Unexpected 
+console statement.  
+no-console
+80:5  Warning: Unexpected 
+console statement.  
+no-console
+
+./app/api/analytics/export/r
+oute.ts
+2:10  Error: 'prisma' is 
+defined but never used. 
+Allowed unused vars must 
+match /^_/u.  @typescript-es
+lint/no-unused-vars
+
+./app/api/cron/test/route.ts
+35:5  Warning: Unexpected 
+console statement.  
+no-console
+
+./app/api/sync/status/route.
+ts
+66:12  Error: 'error' is 
+defined but never used.  @ty
+pescript-eslint/no-unused-va
+rs
+
+./app/api/users/route.ts
+63:12  Error: 'error' is 
+defined but never used.  @ty
+pescript-eslint/no-unused-va
+rs
+101:41  Warning: Unexpected 
+console statement.  
+no-console
+108:12  Error: 'error' is 
+defined but never used.  @ty
+pescript-eslint/no-unused-va
+rs
+
+./components/ui/input.tsx
+4:18  Error: An interface 
+declaring no members is 
+equivalent to its 
+supertype.  @typescript-esli
+nt/no-empty-object-type
+
+./lib/emails/resend.ts
+17:5  Warning: Unexpected 
+console statement.  
+no-console
+30:7  Warning: Unexpected 
+console statement.  
+no-console
+36:5  Warning: Unexpected 
+console statement.  
+no-console
+
+./lib/notifications/webhook.
+ts
+58:5  Warning: Unexpected 
+console statement.  
+no-console
+
+./lib/sync/revoke-users.ts
+38:7  Warning: Unexpected 
+console statement.  
+no-console
+
+./lib/telemetry/logger.ts
+25:39  Warning: Unexpected 
+console statement.  
+no-console
+25:55  Warning: Unexpected 
+console statement.  
+no-console
+
+./lib/telemetry/tracer.ts
+23:5  Warning: Unexpected 
+console statement.  
+no-console
+29:3  Warning: Unexpected 
+console statement.  
+no-console
+32:27  Error: 'name' is 
+defined but never used. 
+Allowed unused args must 
+match /^_/u.  @typescript-es
+lint/no-unused-vars
+
+info  - Need to disable 
+some ESLint rules? Learn 
+more here: https://nextjs.or
+g/docs/basic-features/eslint
+#disabling-rules
+ÔÇëELIFECYCLEÔÇë Command failed with exit code 1.

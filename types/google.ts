@@ -3,7 +3,13 @@ export interface DrivePermission {
   type: 'user' | 'group' | 'domain' | 'anyone';
   emailAddress?: string;
   domain?: string;
-  role: 'owner' | 'organizer' | 'fileOrganizer' | 'writer' | 'commenter' | 'reader';
+  role:
+    | 'owner'
+    | 'organizer'
+    | 'fileOrganizer'
+    | 'writer'
+    | 'commenter'
+    | 'reader';
   deleted?: boolean;
   displayName?: string;
   photoLink?: string;

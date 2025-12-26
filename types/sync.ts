@@ -42,4 +42,5 @@ export interface MappedUser {
   googleEmail: string;
   drivePermissionId: string;
   role: string;
+  image?: string;
 }

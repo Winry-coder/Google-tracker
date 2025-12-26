@@ -55,15 +55,22 @@ export async function GET(): Promise<NextResponse<APIResponse<SyncStatus>>> {
               duration: lastSync.duration,
             }
           : null,
-        recentSyncs: recentSyncs.map((sync) => ({
-          id: sync.id,
-          status: sync.status,
-          timestamp: sync.startedAt.toISOString(),
-          duration: sync.duration,
-        })),
+        recentSyncs: recentSyncs.map(
+          (sync: {
+            id: string;
+            status: string;
+            startedAt: Date;
+            duration: number | null;
+          }) => ({
+            id: sync.id,
+            status: sync.status,
+            timestamp: sync.startedAt.toISOString(),
+            duration: sync.duration,
+          })
+        ),
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ZodError } from 'zod';
 import { prisma } from '@/lib/prisma/client';
 import { paginationSchema } from '@/lib/validations/api.schema';
-import { createUserSchema, userFiltersSchema } from '@/lib/validations/user.schema';
+import {
+  createUserSchema,
+  userFiltersSchema,
+} from '@/lib/validations/user.schema';
 import type { APIResponse, PaginatedResponse } from '@/types/api';
 import type { User } from '@/types/user';
 
@@ -16,7 +20,8 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams;
     const params = Object.fromEntries(searchParams);
 
-    const { page, pageSize, sortBy, sortOrder } = paginationSchema.parse(params);
+    const { page, pageSize, sortBy, sortOrder } =
+      paginationSchema.parse(params);
     const filters = userFiltersSchema.parse(params);
 
     const where: Record<string, unknown> = {};
@@ -61,6 +66,16 @@ export async function GET(
       },
     });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid query parameters',
+          details: error.errors,
+        },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       {
         success: false,
@@ -96,12 +111,18 @@ export async function POST(
       },
     });
 
+    // Send Discord notification
+    const { sendNewLeadNotification } = await import(
+      '@/lib/notifications/webhook'
+    );
+    sendNewLeadNotification(user);
+
     return NextResponse.json({
       success: true,
       data: user,
       message: 'User created successfully',
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,

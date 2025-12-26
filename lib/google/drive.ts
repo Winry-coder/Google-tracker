@@ -45,7 +45,8 @@ export async function fetchAllPermissionsPaginated(
       const response = await fetchWithRetry(() =>
         drive.permissions.list({
           fileId: folderId,
-          fields: 'nextPageToken,permissions(id,emailAddress,role,type,deleted,displayName,photoLink)',
+          fields:
+            'nextPageToken,permissions(id,emailAddress,role,type,deleted,displayName,photoLink)',
           pageSize: 100,
           pageToken,
         })
@@ -64,4 +65,59 @@ export async function fetchAllPermissionsPaginated(
   } while (pageToken);
 
   return allPermissions;
+}
+
+/**
+ * Grants a user reader access to a specific folder
+ */
+export async function grantPermission(
+  folderId: string,
+  email: string
+): Promise<{ id: string }> {
+  const client = await getValidOAuthClient();
+  const drive = google.drive({ version: 'v3', auth: client });
+
+  try {
+    const response = await drive.permissions.create({
+      fileId: folderId,
+      requestBody: {
+        role: 'reader',
+        type: 'user',
+        emailAddress: email,
+      },
+      fields: 'id',
+      sendNotificationEmail: true,
+    });
+
+    return { id: response.data.id || '' };
+  } catch (error) {
+    throw new GoogleAPIError(
+      `Failed to grant permission for email ${email} on folder ${folderId}`,
+      (error as { code?: number }).code,
+      error as Error
+    );
+  }
+}
+/**
+ * Revokes a user's permission for a specific file or folder
+ */
+export async function revokePermission(
+  fileId: string,
+  permissionId: string
+): Promise<void> {
+  const client = await getValidOAuthClient();
+  const drive = google.drive({ version: 'v3', auth: client });
+
+  try {
+    await drive.permissions.delete({
+      fileId,
+      permissionId,
+    });
+  } catch (error) {
+    throw new GoogleAPIError(
+      `Failed to revoke permission ${permissionId} on file/folder ${fileId}`,
+      (error as { code?: number }).code,
+      error as Error
+    );
+  }
 }

@@ -1,5 +1,9 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -13,35 +17,140 @@ datasource db {
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
+  password        String?   // Hashed password for admin login
   name            String?
+  image           String?   // Profile picture URL from Google
   hasAccess       Boolean   @default(false)
   role            String    @default("viewer") // viewer | editor | admin
 
+  // NextAuth relations
+  accounts        Account[]
+  sessions        Session[]
+
   // Google-specific fields
-  googleId        String?   @unique
-  googleEmail     String?   // Original email from Google (before normalization)
-  drivePermissionId String? // Google Drive permission ID
+  googleId          String?   @unique
+  googleEmail       String?   // Original email from Google (before normalization)
+  drivePermissionId String?   // Google Drive permission ID
+
+  // Campaign tracking
+  campaignId      String?
+  campaign        Campaign? @relation(fields: [campaignId], references: [id])
+  variantId       String?
+  variant         Variant?  @relation(fields: [variantId], references: [id])
 
   // Metadata
-  source          String    @default("manual") // "drive" | "manual" | "imported"
+  source          String    @default("manual") // "drive" | "manual" | "imported" | "access_request"
   status          String    @default("active") // "active" | "suspended" | "revoked"
+
+  // Enrichment (Phase 4)
+  company         String?
+  jobTitle        String?
+  linkedinUrl     String?
+  enrichedAt      DateTime?
 
   // Timestamps
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  lastSyncedAt    DateTime?
+  lastSyncedAt    DateTime? 
   revokedAt       DateTime?
-  lastAccessAt    DateTime?
 
   // Relations
-  syncLogs        SyncLog[]
   auditLogs       AuditLog[]
 
   @@index([email])
   @@index([googleId])
-  @@index([source])
   @@index([status])
-  @@index([hasAccess])
+  @@index([source])
+  @@index([campaignId])
+  @@map("users")
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ============================================
+// CAMPAIGN MODEL
+// ============================================
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "Video Course", "Premium Templates"
+  slug        String   @unique // URL-friendly version, e.g., "video-course"
+  description String?
+  folderId    String   // Google Drive folder ID
+  isActive    Boolean  @default(true)
+  
+  // Stats
+  totalLeads  Int      @default(0)
+  viewCount   Int      @default(0) // For conversion tracking
+  
+  // Marketing / Phase 4
+  emailSubject String?
+  emailBody    String?   // Markdown template for welcome email
+  webhookUrl   String?   // External CRM sync (Zapier, etc)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  
+  // Relations
+  users       User[]
+  variants    Variant[]
+  
+  @@index([deletedAt])
+  @@map("campaigns")
+}
+
+model Variant {
+  id          String   @id @default(cuid())
+  name        String   // "A", "B", "Control", etc.
+  title       String?  // Headline for the landing page
+  description String?  // Sub-headline/text
+  buttonText  String?  @default("Request Access")
+  
+  // Analytics
+  viewCount   Int      @default(0)
+  leadCount   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  // Relations
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  users       User[]
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([campaignId])
+  @@map("variants")
 }
 
 // ============================================
@@ -49,72 +158,62 @@ model User {
 // ============================================
 model SyncLog {
   id              String    @id @default(cuid())
-
-  // Sync metadata
   syncType        String    // "manual" | "scheduled" | "webhook"
   status          String    // "success" | "partial" | "failed"
-
-  // Results
+  
+  // Counts
   usersCreated    Int       @default(0)
   usersUpdated    Int       @default(0)
   usersRevoked    Int       @default(0)
   errorsCount     Int       @default(0)
-
-  // Details
-  driveUserCount  Int?      // Total users in Drive folder
-  appUserCount    Int?      // Total users in app
+  
+  // Additional metadata
+  driveUserCount  Int?      // Total users found in Drive
+  appUserCount    Int?      // Total users in app before sync
   duration        Int?      // Duration in milliseconds
-
-  // Error tracking
+  
+  // Error details
   errorMessage    String?
   errorStack      String?
-
+  
   // Timestamps
   startedAt       DateTime  @default(now())
   completedAt     DateTime?
-
-  // Relations
-  userId          String?
-  user            User?     @relation(fields: [userId], references: [id])
-
-  @@index([status])
+  
   @@index([syncType])
+  @@index([status])
   @@index([startedAt])
+  @@map("sync_logs")
 }
 
 // ============================================
 // AUDIT LOG MODEL
 // ============================================
 model AuditLog {
-  id              String    @id @default(cuid())
-
-  // Event details
-  eventType       String    // "user.created" | "user.updated" | "access.granted" | "access.revoked"
-  eventSource     String    // "drive_sync" | "admin_action" | "api"
-
-  // Changes
-  oldValue        String?   // JSON string of old state
-  newValue        String?   // JSON string of new state
-
-  // Actor
-  performedBy     String?   // User ID or "system"
-  performedByEmail String?
-
-  // Context
-  metadata        String?   // JSON string for additional context
-  ipAddress       String?
-  userAgent       String?
-
-  // Timestamp
-  createdAt       DateTime  @default(now())
-
+  id            String    @id @default(cuid())
+  eventType     String    // "user.created" | "user.updated" | "user.revoked" | "access.granted"
+  eventSource   String    // "drive_sync" | "api" | "manual" | "access_request"
+  
+  // Change tracking
+  oldValue      String?   // JSON string of old values
+  newValue      String?   // JSON string of new values
+  
+  // Metadata
+  performedBy   String    // "system" | "admin" | user email
+  ipAddress     String?
+  userAgent     String?
+  
   // Relations
-  userId          String?
-  user            User?     @relation(fields: [userId], references: [id])
-
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+  
+  // Timestamp
+  createdAt     DateTime  @default(now())
+  
   @@index([eventType])
   @@index([userId])
   @@index([createdAt])
+  @@map("audit_logs")
 }
 
 // ============================================

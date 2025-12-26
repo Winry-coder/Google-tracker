@@ -89,9 +89,7 @@ test.describe('Sync Flow', () => {
     });
 
     // Verify error message is displayed
-    await expect(
-      page.getByText(/oauth token expired/i)
-    ).toBeVisible();
+    await expect(page.getByText(/oauth token expired/i)).toBeVisible();
   });
 
   test('should show sync status after successful sync', async ({ page }) => {

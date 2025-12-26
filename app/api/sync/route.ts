@@ -9,7 +9,9 @@ import type { SyncResult } from '@/types/sync';
  * POST /api/sync
  * Triggers a manual Drive sync operation
  */
-export async function POST(request: Request): Promise<NextResponse<APIResponse<SyncResult>>> {
+export async function POST(
+  request: Request
+): Promise<NextResponse<APIResponse<SyncResult>>> {
   try {
     const body = await request.json();
     const { folderId } = triggerSyncSchema.parse(body);

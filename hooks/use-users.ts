@@ -19,16 +19,12 @@ async function fetchUsers(
   const searchParams = new URLSearchParams();
 
   if (params.page) searchParams.set('page', params.page.toString());
-  if (params.pageSize)
-    searchParams.set('pageSize', params.pageSize.toString());
-  if (params.filters?.status)
-    searchParams.set('status', params.filters.status);
-  if (params.filters?.source)
-    searchParams.set('source', params.filters.source);
+  if (params.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+  if (params.filters?.status) searchParams.set('status', params.filters.status);
+  if (params.filters?.source) searchParams.set('source', params.filters.source);
   if (params.filters?.hasAccess !== undefined)
     searchParams.set('hasAccess', params.filters.hasAccess.toString());
-  if (params.filters?.search)
-    searchParams.set('search', params.filters.search);
+  if (params.filters?.search) searchParams.set('search', params.filters.search);
 
   const response = await fetch(`/api/users?${searchParams}`);
   if (!response.ok) throw new Error('Failed to fetch users');
@@ -50,10 +46,7 @@ async function createUser(input: CreateUserInput): Promise<User> {
   return json.data;
 }
 
-async function updateUser(
-  id: string,
-  updates: UpdateUserInput
-): Promise<User> {
+async function updateUser(id: string, updates: UpdateUserInput): Promise<User> {
   const response = await fetch(`/api/users/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

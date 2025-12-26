@@ -22,7 +22,7 @@ export function SyncStatus(): JSX.Element {
 
   return (
     <div className="rounded-lg border p-4">
-      <h3 className="font-semibold mb-2">Last Sync</h3>
+      <h3 className="mb-2 font-semibold">Last Sync</h3>
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Time:</span>
@@ -32,9 +32,7 @@ export function SyncStatus(): JSX.Element {
           <span className="text-muted-foreground">Status:</span>
           <span
             className={
-              lastSync.status === 'success'
-                ? 'text-green-600'
-                : 'text-red-600'
+              lastSync.status === 'success' ? 'text-green-600' : 'text-red-600'
             }
           >
             {lastSync.status}

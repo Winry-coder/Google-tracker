@@ -18,16 +18,17 @@ export function createOAuthClient(
    * See .env.example for instructions
    */
   if (!clientId || !clientSecret || !redirectUri) {
+    const missing = [];
+    if (!clientId) missing.push('GOOGLE_CLIENT_ID');
+    if (!clientSecret) missing.push('GOOGLE_CLIENT_SECRET');
+    if (!redirectUri) missing.push('GOOGLE_REDIRECT_URI');
+
     throw new GoogleAPIError(
-      'Missing required OAuth2 credentials. Check environment variables.'
+      `Missing required OAuth2 credentials: ${missing.join(', ')}. Check your .env file.`
     );
   }
 
-  const client = new google.auth.OAuth2(
-    clientId,
-    clientSecret,
-    redirectUri
-  );
+  const client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 
   const refreshToken = config?.refreshToken || process.env.GOOGLE_REFRESH_TOKEN;
 
@@ -63,8 +64,9 @@ export async function getValidOAuthClient(): Promise<Auth.OAuth2Client> {
         );
       }
     }
+    const message = error instanceof Error ? error.message : 'Unknown error';
     throw new GoogleAPIError(
-      'Failed to get valid OAuth client',
+      `Failed to get valid OAuth client: ${message}`,
       500,
       error as Error
     );
