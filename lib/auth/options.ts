@@ -1,5 +1,6 @@
 import { NextAuthOptions, DefaultSession } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/prisma/client';
 import bcrypt from 'bcryptjs';
@@ -76,6 +77,24 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
         };
+      },
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          access_type: 'offline',
+          prompt: 'consent',
+          scope: [
+            'https://www.googleapis.com/auth/drive',
+            'https://www.googleapis.com/auth/drive.metadata.readonly',
+            'https://www.googleapis.com/auth/drive.readonly',
+            'openid',
+            'email',
+            'profile',
+          ].join(' '),
+        },
       },
     }),
   ],

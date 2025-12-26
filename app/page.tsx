@@ -287,37 +287,33 @@ export default function DashboardPage(): JSX.Element {
       <div className="container mx-auto space-y-6 px-4 py-6 sm:space-y-8 sm:py-8">
         <StatsCards />
 
-        {/* Getting Started guide to help new admins configure the system */}
+        {/* Getting Started guide */}
         <Card className="overflow-hidden rounded-2xl border-none bg-white shadow-sm">
           <CardHeader>
             <CardTitle>Getting Started</CardTitle>
             <CardDescription>
-              Follow these quick steps to configure your .env file and connect
-              Google Drive.
+              Launch your campaign in 3 simple steps.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 text-sm text-slate-600 md:grid-cols-3">
             <div>
               <h3 className="mb-1 font-semibold">
-                1. Configure your .env file
+                1. Sign in with Google
               </h3>
               <p>
-                Copy .env.example, fill in your Google and database credentials,
-                then restart the app.
+                Connect your Google account to enable secure access to your Drive folders.
               </p>
             </div>
             <div>
-              <h3 className="mb-1 font-semibold">2. Create an admin account</h3>
+              <h3 className="mb-1 font-semibold">2. Connect a Folder</h3>
               <p>
-                Use the provided script to create an admin user, then sign in
-                via the login page.
+                Select the Google Drive folder you want to track leads for.
               </p>
             </div>
             <div>
-              <h3 className="mb-1 font-semibold">3. Run your first sync</h3>
+              <h3 className="mb-1 font-semibold">3. Share & Track</h3>
               <p>
-                Click "Sync Now" to import Google Drive permissions into the
-                dashboard.
+                Share your unique access link and watch leads roll in automatically.
               </p>
             </div>
           </CardContent>

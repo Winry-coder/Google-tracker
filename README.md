@@ -21,6 +21,8 @@ A production-ready Next.js application that automatically synchronizes Google Dr
 
 - **Google Integration**
   - ✅ OAuth2 client with token refresh
+  - ✅ **Per-User Authentication** (Flow A): Creators sign in with their own Google accounts
+  - ✅ **Secure Token Storage**: AES-256 encryption for user tokens
   - ✅ Drive API integration with rate limiting
   - ✅ Permission fetching with pagination
   - ✅ Edge case handling (suspended accounts, duplicates, etc.)
@@ -112,10 +114,12 @@ Fill in all the TODO fields in `.env`. See `.env.example` for detailed instructi
 - `GOOGLE_CLIENT_ID` - From Google Cloud Console
 - `GOOGLE_CLIENT_SECRET` - From Google Cloud Console
 - `GOOGLE_REDIRECT_URI` - OAuth callback URL
-- `GOOGLE_REFRESH_TOKEN` - Generate using setup script
-- `GOOGLE_DRIVE_FOLDER_ID` - Extract from Drive folder URL
+- `GOOGLE_REDIRECT_URI` - OAuth callback URL
+- `GOOGLE_REFRESH_TOKEN` - Generate using setup script (for Admin/System access)
+- `GOOGLE_DRIVE_FOLDER_ID` - Default folder ID (optional)
 - `TURSO_DATABASE_URL` - From Turso dashboard
 - `TURSO_AUTH_TOKEN` - From Turso CLI
+- `TOKEN_ENCRYPTION_KEY` - 32-byte Base64 key for encrypting user tokens (Generate with `openssl rand -base64 32`)
 
 ### 2. Google OAuth Setup
 

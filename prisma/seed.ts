@@ -123,6 +123,42 @@ async function main(): Promise<void> {
 
   console.log(`✅ Created ${auditLogs.length} audit logs`);
 
+  // Create test campaigns
+  const campaigns = await Promise.all([
+    prisma.campaign.upsert({
+      where: { slug: 'video-course' },
+      update: {},
+      create: {
+        name: 'Video Course 2024',
+        slug: 'video-course',
+        description: 'The ultimate guide to video production',
+        folderId: '1234567890abcdef',
+        isActive: true,
+        ownerId: users[3].id, // manual@example.com (Admin)
+        variants: {
+          create: [
+            {
+              name: 'Variant A',
+              title: 'Get Access Now',
+              description: 'Join 500+ happy students',
+              buttonText: 'Start Learning',
+              isActive: true,
+            },
+            {
+              name: 'Variant B',
+              title: 'Limited Time Offer',
+              description: 'Access closes in 24 hours',
+              buttonText: 'Claim Access',
+              isActive: true,
+            },
+          ],
+        },
+      },
+    }),
+  ]);
+
+  console.log(`✅ Created ${campaigns.length} campaigns`);
+
   // Create sync config
   await prisma.syncConfig.upsert({
     where: { key: 'last_sync_timestamp' },

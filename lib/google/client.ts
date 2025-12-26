@@ -1,6 +1,7 @@
 import { google, Auth } from 'googleapis';
 import { GoogleAPIError } from '@/lib/utils/errors';
 import type { OAuth2Config } from '@/types/google';
+import { prisma } from '@/lib/prisma/client';
 
 /**
  * Creates and configures OAuth2 client for Google APIs
@@ -71,4 +72,35 @@ export async function getValidOAuthClient(): Promise<Auth.OAuth2Client> {
       error as Error
     );
   }
+}
+
+/**
+ * Gets an OAuth2 client for a specific user using their stored tokens
+ */
+export async function getUserOAuthClient(userId: string): Promise<Auth.OAuth2Client> {
+  const account = await prisma.account.findFirst({
+    where: { userId, provider: 'google' },
+  });
+
+  if (!account || !account.access_token) {
+    throw new GoogleAPIError('Google account not connected for this user');
+  }
+
+  // Tokens are automatically decrypted by the Prisma middleware
+  const client = createOAuthClient();
+  client.setCredentials({
+    access_token: account.access_token,
+    refresh_token: account.refresh_token || undefined,
+    expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
+  });
+
+  return client;
+}
+
+/**
+ * Gets a Drive API instance for a specific user
+ */
+export async function getDriveForUser(userId: string) {
+  const auth = await getUserOAuthClient(userId);
+  return google.drive({ version: 'v3', auth });
 }

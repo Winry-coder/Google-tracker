@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/prisma/client';
 import { createCampaignSchema } from '@/lib/validations/campaign.schema';
-import { validateDriveFolder } from '@/lib/google/validate-folder';
+import { validateDriveFolderForUser } from '@/lib/google/validate-folder';
 import { ZodError } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -93,9 +95,18 @@ export async function GET(request: Request) {
       return response;
     }
 
+
+
+    // Authenticated View: Scope to owner
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const campaigns = await prisma.campaign.findMany({
       where: {
         deletedAt: null,
+        ownerId: session.user.id,
       },
       include: {
         _count: {
@@ -108,18 +119,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      data: campaigns.map(
-        (c: {
-          id: string;
-          name: string;
-          slug: string;
-          _count: { users: number };
-          variants: { id: string }[];
-        }) => ({
+      data: campaigns.map((c) => ({
           ...c,
           totalLeads: c._count.users,
-        })
-      ),
+      })),
     });
   } catch {
     if (process.env.NODE_ENV === 'development') {
@@ -138,6 +141,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // 1. Zod Validation
     const validated = createCampaignSchema.parse(body);
 
@@ -152,7 +160,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Check for folderId collision
+    // 3. Check for folderId collision (scope to owner?? Maybe not, globally unique folder map is better for sync simplicity?)
+    // Let's keep it global for now to avoid multiple campaigns tracking same folder?
+    // Actually, "where: { folderId: ... }" is global check.
     const existingFolder = await prisma.campaign.findFirst({
       where: { folderId: validated.folderId, deletedAt: null },
     });
@@ -166,7 +176,9 @@ export async function POST(request: Request) {
     }
 
     // 4. Drive Folder Validation (Crucial requirement)
-    const folderValid = await validateDriveFolder(validated.folderId);
+    // Use user-specific validator
+    const folderValid = await validateDriveFolderForUser(session.user.id, validated.folderId);
+    
     if (!folderValid.isValid) {
       if (process.env.NODE_ENV === 'development') {
         // eslint-disable-next-line no-console
@@ -185,6 +197,7 @@ export async function POST(request: Request) {
     const campaign = await prisma.campaign.create({
       data: {
         ...campaignData,
+        ownerId: session.user.id,
         variants:
           variants && variants.length > 0
             ? {

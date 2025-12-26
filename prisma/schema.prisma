@@ -56,6 +56,7 @@ model User {
 
   // Relations
   auditLogs       AuditLog[]
+  ownedCampaigns  Campaign[] @relation("CampaignOwner")
 
   @@index([email])
   @@index([googleId])
@@ -105,6 +106,10 @@ model Campaign {
   description String?
   folderId    String   // Google Drive folder ID
   isActive    Boolean  @default(true)
+
+  // NEW
+  ownerId     String?  @map("owner_id")
+  owner       User?    @relation("CampaignOwner", fields: [ownerId], references: [id])
   
   // Stats
   totalLeads  Int      @default(0)
@@ -125,6 +130,7 @@ model Campaign {
   variants    Variant[]
   
   @@index([deletedAt])
+  @@index([ownerId])
   @@map("campaigns")
 }
 

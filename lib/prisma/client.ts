@@ -40,6 +40,45 @@ if (isRemoteDatabase && authToken) {
   });
 }
 
+// Encryption Middleware
+import { encrypt, decrypt } from '@/lib/security/encryption';
+
+prismaClient.$use(async (params, next) => {
+  if (params.model !== 'Account') {
+    return next(params);
+  }
+
+  // Encryption on write
+  if (['create', 'update', 'upsert'].includes(params.action)) {
+    const data = params.args.data;
+    if (data) {
+        // Handle nested create/update if necessary, but standard NextAuth adapter usually does flat create
+        if (typeof data.access_token === 'string') data.access_token = encrypt(data.access_token);
+        if (typeof data.refresh_token === 'string') data.refresh_token = encrypt(data.refresh_token);
+    }
+  }
+
+  const result = await next(params);
+
+  // Decryption on read
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const decryptAccount = (acc: any) => {
+    if (!acc) return acc;
+    if (acc.access_token) acc.access_token = decrypt(acc.access_token);
+    if (acc.refresh_token) acc.refresh_token = decrypt(acc.refresh_token);
+    return acc;
+  };
+
+  if (params.action.startsWith('find')) {
+       if (Array.isArray(result)) {
+      return result.map(decryptAccount);
+    }
+    return decryptAccount(result);
+  }
+ 
+  return result;
+});
+
 export const prisma = globalForPrisma.prisma ?? prismaClient;
 
 if (process.env.NODE_ENV !== 'production') {

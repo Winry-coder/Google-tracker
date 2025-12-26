@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { getValidOAuthClient } from './client';
+import { getValidOAuthClient, getDriveForUser } from './client';
 
 export interface FolderValidationResult {
   isValid: boolean;
@@ -81,6 +81,71 @@ export async function validateDriveFolder(
         isValid: false,
         error:
           'Google Refresh Token is invalid or expired. Run pnpm run setup:google-auth again.',
+      };
+    }
+
+    return {
+      isValid: false,
+      error: `Google API Error: ${message}`,
+    };
+  }
+}
+
+/**
+ * Validates if a Google Drive folder ID exists and is accessible using a specific user's credentials
+ */
+export async function validateDriveFolderForUser(
+  userId: string,
+  input: string
+): Promise<FolderValidationResult> {
+  const folderId = extractFolderId(input);
+  try {
+    if (!folderId) {
+      return { isValid: false, error: 'Empty folder ID provided.' };
+    }
+
+    const drive = await getDriveForUser(userId);
+
+    // Fetch folder metadata
+    const response = await drive.files.get({
+      fileId: folderId,
+      fields: 'id, name, mimeType',
+    });
+
+    // Check if it's actually a folder
+    if (response.data.mimeType !== 'application/vnd.google-apps.folder') {
+      return {
+        isValid: false,
+        error: 'The provided ID is for a file, not a folder.',
+      };
+    }
+
+    // Try to fetch permissions to see if we can read them
+    const permissions = await drive.permissions.list({
+      fileId: folderId,
+      fields: 'permissions(id)',
+    });
+
+    return {
+      isValid: true,
+      name: response.data.name || 'Untitled Folder',
+      permissionsCount: permissions.data.permissions?.length || 0,
+    };
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.error('Folder validation error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        error,
+      });
+    }
+
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    if (message.includes('404')) {
+      return {
+        isValid: false,
+        error: 'Folder not found. You might not have access to this folder.',
       };
     }
 
