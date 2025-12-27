@@ -60,11 +60,11 @@ export async function GET() {
     });
 
     const totalViews = campaigns.reduce(
-      (acc: number, c) => acc + (c.viewCount || 0),
+      (acc: number, c: { viewCount: number | null }) => acc + (c.viewCount || 0),
       0
     );
     const totalLeads = campaigns.reduce(
-      (acc: number, c) => acc + c._count.users,
+      (acc: number, c: { _count: { users: number } }) => acc + c._count.users,
       0
     );
     const conversionRate = totalViews > 0 ? (totalLeads / totalViews) * 100 : 0;
