@@ -34,7 +34,15 @@ export async function GET() {
     ].join(',');
 
     // Map users to CSV rows
-    const rows = users.map((user) => {
+    const rows = users.map((user: {
+      email: string;
+      name: string | null;
+      status: string;
+      role: string;
+      source: string;
+      hasAccess: boolean;
+      lastSyncedAt: Date | null;
+    }) => {
       return [
         user.email,
         `"${user.name || ''}"`, // Wrap in quotes to handle commas in names
