@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma/client';
 import { createCampaignSchema } from '@/lib/validations/campaign.schema';
 import { validateDriveFolderForUser } from '@/lib/google/validate-folder';
 import { ZodError } from 'zod';
+import { Variant } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
 
         if (existingVariantId) {
           selectedVariant =
-            campaign.variants.find((v) => v.id === existingVariantId) ?? null;
+            campaign.variants.find((v: Variant) => v.id === existingVariantId) ?? null;
         }
 
         // If no valid variant found in cookies, pick a random one
