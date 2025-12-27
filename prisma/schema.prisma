@@ -32,6 +32,10 @@ model User {
   googleEmail       String?   // Original email from Google (before normalization)
   drivePermissionId String?   // Google Drive permission ID
 
+  // Notification preferences
+  discordWebhookUrl       String?   // Per-user Discord webhook for lead alerts
+  discordNotificationsEnabled Boolean @default(false)
+
   // Campaign tracking
   campaignId      String?
   campaign        Campaign? @relation(fields: [campaignId], references: [id])

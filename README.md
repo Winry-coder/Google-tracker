@@ -116,7 +116,7 @@ Fill in all the TODO fields in `.env`. See `.env.example` for detailed instructi
 - `GOOGLE_REDIRECT_URI` - OAuth callback URL
 - `GOOGLE_REDIRECT_URI` - OAuth callback URL
 - `GOOGLE_REFRESH_TOKEN` - Generate using setup script (for Admin/System access)
-- `GOOGLE_DRIVE_FOLDER_ID` - Default folder ID (optional)
+- `GOOGLE_DRIVE_FOLDER_ID` - **Legacy** default folder ID (optional). Main flows now use per-campaign `folderId` + per-user tokens; this can be omitted for standard SaaS usage.
 - `TURSO_DATABASE_URL` - From Turso dashboard
 - `TURSO_AUTH_TOKEN` - From Turso CLI
 - `TOKEN_ENCRYPTION_KEY` - 32-byte Base64 key for encrypting user tokens (Generate with `openssl rand -base64 32`)
@@ -337,27 +337,19 @@ pnpm exec playwright test
 - ✅ Large folders (pagination)
 - 🔨 Concurrent syncs (locking mechanism - to be implemented)
 
-## 🔐 Security Features
-
-- ✅ All credentials in environment variables (never in code)
-- ✅ TypeScript strict mode (no implicit any)
-- ✅ Input validation with Zod
-- ✅ SQL injection prevention (Prisma)
-- ✅ Security headers in Next.js config
-- ✅ OAuth token refresh
-- 🔨 CSRF protection (to be implemented)
-- 🔨 Rate limiting per user (to be implemented)
-- 🔨 Authentication middleware (to be implemented)
 
 ## 📊 API Endpoints
 
 ### Sync
 
-- `POST /api/sync` - Trigger manual sync
-  - Body: `{ folderId?: string, force?: boolean }`
-  - Returns: `SyncResult`
+- `POST /api/sync` - Trigger manual sync **for campaigns**
+  - Body: `{ campaignId?: string, force?: boolean }`
+    - If `campaignId` is provided, syncs only that campaign.
+    - If omitted, syncs **all active campaigns**.
+  - Always runs in the context of each campaign's owner (per-user Google OAuth), not a global folder ID.
+  - Returns: `SyncResult` (single or aggregated across campaigns).
 
-- `GET /api/sync/status` - Get sync status
+- `GET /api/sync/status` - Get sync status (admin only)
   - Returns: Last sync and recent history
 
 ### Users
@@ -459,6 +451,51 @@ test.setTimeout(60000); // 60 seconds
    - Setup GitHub Actions CI/CD
    - Deploy to production (Vercel/Railway)
    - Monitor and fix issues
+
+## 🚦 Launch Readiness Checklist (Current Status)
+
+This reflects the concise launch checklist we discussed and what has already been implemented in this repo.
+
+1. **Environment & secrets configured in production**
+   - Status: ⏳ *Owner action required* (code reads from env vars only; you must set them in hosting).
+
+2. **Google OAuth & Drive setup (consent screen, scopes, verification)**
+   - Status: ⏳ *Owner action required* (docs point to Google Cloud Console; external configuration is up to you).
+
+3. **AuthZ hardening (roles & access)**
+   - Status: ✅ Implemented
+   - Details:
+     - Admin-only guards added to sensitive routes such as `/api/users/**`, `/api/sync`, `/api/sync/status`, and `/api/analytics/**`.
+     - Creator-only data (campaigns, dashboard) is scoped by `ownerId`.
+
+4. **Sync engine behavior**
+   - Status: ✅ Implemented
+   - Details:
+     - Cron sync (`/api/cron/sync`) runs per campaign using each campaign owner’s Google tokens.
+     - Manual sync (`/api/sync`) now operates on campaigns (single `campaignId` or all active campaigns) and never against a raw folder ID.
+
+5. **Basic automated tests**
+   - Status: ✅ Partially implemented
+   - Details:
+     - Vitest unit tests exist for sync utilities and Google permission mapping.
+     - New unit tests added for `lib/security/encryption.ts` (round-trip, idempotency, corrupted input, missing key).
+     - E2E tests cover sync button behavior via Playwright.
+
+6. **Monitoring & error visibility**
+   - Status: ⏳ *Owner action required*
+   - Details: structured logging is wired in (`lib/telemetry/logger`), but external log aggregation / error tracking (e.g. Sentry) must be configured by you.
+
+7. **UX & docs for SaaS creators**
+   - Status: ✅ Mostly implemented
+   - Details: Dashboard and onboarding flows are creator-focused; user-facing copy no longer instructs end users to touch `.env`. README and quick refs describe the campaign-based model and per-user Google OAuth.
+
+8. **Data safety / backups**
+   - Status: ⏳ *Owner action required*
+   - Details: Prisma + Turso handle persistence; you should enable provider-level backups or schedule exports according to your needs.
+
+9. **Legal (Privacy Policy / Terms)**
+   - Status: ⏳ *Owner action required*
+   - Details: You must supply your own legal documents and link them in your marketing site and Google OAuth consent screen.
 
 ## 📝 License
 

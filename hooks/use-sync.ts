@@ -3,11 +3,11 @@ import { useSyncStore } from '@/store/sync-store';
 import { useUIStore } from '@/store/ui-store';
 import type { SyncResult } from '@/types/sync';
 
-async function triggerSync(folderId?: string): Promise<SyncResult> {
+async function triggerSync(campaignId?: string): Promise<SyncResult> {
   const response = await fetch('/api/sync', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ folderId }),
+    body: JSON.stringify({ campaignId }),
   });
 
   if (!response.ok) {

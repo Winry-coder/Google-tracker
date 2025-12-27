@@ -60,11 +60,11 @@ cp .env.example .env
 
 ### Environment Variables reference:
 
-| Key                      | Description                                    |
-| :----------------------- | :--------------------------------------------- |
-| `GOOGLE_DRIVE_FOLDER_ID` | (Deprecated) Used for legacy single-sync mode. |
-| `CRON_SECRET`            | Header secret for triggering automated syncs.  |
-| `DISCORD_WEBHOOK_URL`    | For real-time lead notifications.              |
+| Key                      | Description                                                         |
+| :----------------------- | :------------------------------------------------------------------ |
+| `GOOGLE_DRIVE_FOLDER_ID` | (Legacy) Optional default folder for old single-sync flows.        |
+| `CRON_SECRET`            | Header secret for triggering automated `/api/cron/sync` jobs.      |
+| `DISCORD_WEBHOOK_URL`    | For real-time lead notifications.                                  |
 
 ---
 

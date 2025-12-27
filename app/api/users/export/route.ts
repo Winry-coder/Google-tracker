@@ -1,12 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { formatDate } from '@/lib/utils/format';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
 
 /**
  * GET /api/users/export
  * Downloads all users as a CSV file
  */
 export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, error: 'Forbidden' },
+      { status: 403 }
+    );
+  }
+
   try {
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' },

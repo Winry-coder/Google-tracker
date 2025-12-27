@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { revokePermission } from '@/lib/google/drive';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
 
 /**
  * POST /api/users/bulk
@@ -9,6 +11,14 @@ import { revokePermission } from '@/lib/google/drive';
  */
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
     const { userIds, action, status } = await request.json();
 
     if (!Array.isArray(userIds) || userIds.length === 0) {

@@ -1,11 +1,28 @@
 import { User } from '@/types/user';
 
 /**
+ * Resolve the best webhook URL for a given user.
+ *
+ * Preference order:
+ * 1. Per-user Discord webhook (if enabled and present)
+ * 2. Global DISCORD_WEBHOOK_URL
+ * 3. Global SLACK_WEBHOOK_URL
+ */
+function resolveWebhookUrl(user: User): string | null {
+  if (user.discordNotificationsEnabled && user.discordWebhookUrl) {
+    return user.discordWebhookUrl;
+  }
+
+  return (
+    process.env.DISCORD_WEBHOOK_URL || process.env.SLACK_WEBHOOK_URL || null
+  );
+}
+
+/**
  * Sends a notification to Discord/Slack via Webhook
  */
 export async function sendNewLeadNotification(user: User) {
-  const webhookUrl =
-    process.env.DISCORD_WEBHOOK_URL || process.env.SLACK_WEBHOOK_URL;
+  const webhookUrl = resolveWebhookUrl(user);
 
   if (!webhookUrl) return;
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { runDriveSync } from '@/lib/sync/reconcile';
+import { logger } from '@/lib/telemetry/logger';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes
@@ -38,10 +39,26 @@ export async function GET(request: Request) {
     const results = [];
     for (const campaign of campaigns) {
       try {
+        // Enforce per-owner context: campaigns without an owner are skipped
+        if (!campaign.ownerId) {
+          logger.warn('Skipping campaign without ownerId during cron sync', {
+            campaignId: campaign.id,
+            campaignName: campaign.name,
+          });
+          results.push({
+            campaignId: campaign.id,
+            campaignName: campaign.name,
+            success: false,
+            error:
+              'Campaign has no owner configured; cannot sync without per-user Google tokens.',
+          });
+          continue;
+        }
+
         const result = await runDriveSync(
           campaign.folderId,
           campaign.id,
-          campaign.ownerId || undefined
+          campaign.ownerId
         );
 
         // Update campaign stats
@@ -60,10 +77,10 @@ export async function GET(request: Request) {
           ...result,
         });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          console.error(`Failed to sync campaign ${campaign.name}:`, error);
-        }
+        logger.error('Failed to sync campaign during cron job', error as Error, {
+          campaignId: campaign.id,
+          campaignName: campaign.name,
+        });
         results.push({
           campaignId: campaign.id,
           campaignName: campaign.name,
@@ -79,10 +96,7 @@ export async function GET(request: Request) {
       results,
     });
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.error('Cron job failed:', error);
-    }
+    logger.error('Cron job failed', error as Error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }

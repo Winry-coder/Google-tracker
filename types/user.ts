@@ -4,7 +4,7 @@ export type User = PrismaUser;
 
 export type UserRole = 'viewer' | 'editor' | 'admin';
 
-export type UserSource = 'drive' | 'manual' | 'imported';
+export type UserSource = 'drive' | 'manual' | 'imported' | 'access_request';
 
 export type UserStatus = 'active' | 'suspended' | 'revoked';
 

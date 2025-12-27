@@ -284,7 +284,15 @@ POST /api/campaigns
 POST /api/campaigns/CAMPAIGN_ID/sync
 ```
 
-**Option C: Sync All Campaigns (Cron)**
+**Option C: Manual multi-campaign sync (admin-only)**
+
+```bash
+POST /api/sync
+# Body: { "campaignId": "CAMPAIGN_ID" } to sync one campaign
+#   or {} to sync all active campaigns.
+```
+
+**Option D: Sync All Campaigns (Cron)**
 
 ```bash
 GET /api/cron/sync

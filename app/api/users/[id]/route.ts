@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { updateUserSchema } from '@/lib/validations/user.schema';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
 import type { APIResponse } from '@/types/api';
 import type { User } from '@/types/user';
 
@@ -18,6 +20,14 @@ export async function GET(
   _request: Request,
   { params }: RouteContext
 ): Promise<NextResponse<APIResponse<User>>> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, error: 'Forbidden' },
+      { status: 403 }
+    );
+  }
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: params.id },
@@ -63,6 +73,14 @@ export async function PATCH(
   request: Request,
   { params }: RouteContext
 ): Promise<NextResponse<APIResponse<User>>> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, error: 'Forbidden' },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
     const updates = updateUserSchema.parse(body);
@@ -106,6 +124,14 @@ export async function DELETE(
   _request: Request,
   { params }: RouteContext
 ): Promise<NextResponse<APIResponse<null>>> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, error: 'Forbidden' },
+      { status: 403 }
+    );
+  }
+
   try {
     await prisma.user.delete({
       where: { id: params.id },

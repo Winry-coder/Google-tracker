@@ -66,7 +66,25 @@ Content-Type: application/json
 POST http://localhost:3000/api/campaigns/CAMPAIGN_ID/sync
 ```
 
-### Sync All Campaigns
+### Manual Multi-Campaign Sync (Admin)
+
+```bash
+# Sync a single campaign
+POST http://localhost:3000/api/sync
+Content-Type: application/json
+
+{
+  "campaignId": "CAMPAIGN_ID"
+}
+
+# Sync all active campaigns
+POST http://localhost:3000/api/sync
+Content-Type: application/json
+
+{}
+```
+
+### Sync All Campaigns via Cron
 
 ```bash
 GET http://localhost:3000/api/cron/sync

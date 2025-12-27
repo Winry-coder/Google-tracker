@@ -6,6 +6,8 @@ import {
   createUserSchema,
   userFiltersSchema,
 } from '@/lib/validations/user.schema';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
 import type { APIResponse, PaginatedResponse } from '@/types/api';
 import type { User } from '@/types/user';
 
@@ -16,6 +18,14 @@ import type { User } from '@/types/user';
 export async function GET(
   request: NextRequest
 ): Promise<NextResponse<APIResponse<PaginatedResponse<User>>>> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, error: 'Forbidden' },
+      { status: 403 }
+    );
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const params = Object.fromEntries(searchParams);
@@ -93,6 +103,14 @@ export async function GET(
 export async function POST(
   request: Request
 ): Promise<NextResponse<APIResponse<User>>> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, error: 'Forbidden' },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
     const data = createUserSchema.parse(body);

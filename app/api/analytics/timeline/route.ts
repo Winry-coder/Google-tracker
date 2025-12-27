@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTimelineData } from '@/lib/analytics/queries';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +10,11 @@ export const dynamic = 'force-dynamic';
  * Query Params: ?days=7|30|90
  */
 export async function GET(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '7', 10);

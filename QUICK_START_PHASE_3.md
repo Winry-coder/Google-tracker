@@ -337,10 +337,24 @@ curl http://localhost:3000/api/campaigns
 curl http://localhost:3000/api/campaigns/CAMPAIGN_ID
 ```
 
-**Sync Campaign:**
+**Sync Campaign (direct):**
 
 ```bash
 curl -X POST http://localhost:3000/api/campaigns/CAMPAIGN_ID/sync
+```
+
+**Sync via manual multi-campaign endpoint (admin):**
+
+```bash
+# Single campaign
+curl -X POST http://localhost:3000/api/sync \
+  -H "Content-Type: application/json" \
+  -d '{ "campaignId": "CAMPAIGN_ID" }'
+
+# All active campaigns
+curl -X POST http://localhost:3000/api/sync \
+  -H "Content-Type: application/json" \
+  -d '{}'
 ```
 
 ---
