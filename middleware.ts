@@ -8,7 +8,7 @@ export default withAuth(
     const isLoginPage = req.nextUrl.pathname.startsWith('/login');
 
     if (isLoginPage && isAuth) {
-      return NextResponse.redirect(new URL('/', req.url));
+      return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
     return NextResponse.next();
@@ -22,7 +22,8 @@ export default withAuth(
         }
 
         const isLoginPage = req.nextUrl.pathname.startsWith('/login');
-        if (isLoginPage) return true;
+        const isLandingPage = req.nextUrl.pathname === '/';
+        if (isLoginPage || isLandingPage) return true;
         return !!token;
       },
     },
@@ -36,10 +37,11 @@ export const config = {
      * - api/auth (auth API routes)
      * - api/access (public lead capture API)
      * - access (public lead capture UI)
+     * - landing (public landing page)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api/auth|api/access|access|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/auth|api/access|access|landing|_next/static|_next/image|favicon.ico).*)',
   ],
 };

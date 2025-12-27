@@ -1,716 +1,706 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import {
-  Search,
-  Database,
-  Download,
-  User as UserIcon,
-  Filter,
-  BarChart3,
-  CheckSquare,
-  Square,
-  Trash2,
-  ShieldCheck,
-  ShieldAlert,
-  ChevronDown,
-  Loader2,
-  Menu,
-  LogOut,
-  Mail,
-  Briefcase,
-} from 'lucide-react';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { useUsers } from '@/hooks/use-users';
-import { SyncButton } from '@/components/sync/sync-button';
-import { StatsCards } from '@/components/dashboard/stats-cards';
-import { ActivityFeed } from '@/components/dashboard/activity-feed';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
+import { ArrowRight, Check, ChevronDown, Menu, X, Zap, TrendingUp, Users, Link, BarChart3, Download, Database, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { formatDate } from '@/lib/utils/format';
-import { CreateUserDialog } from '@/components/users/create-user-dialog';
-import { UserDetailSheet } from '@/components/users/user-detail-sheet';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
 
-interface Campaign {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  folderId: string;
-  isActive: boolean;
-  totalLeads: number;
-  createdAt: string;
-  updatedAt: string;
-}
+export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-export default function DashboardPage(): JSX.Element {
-  const [search, setSearch] = useState('');
-  const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-  const [isBulkActionRunning, setIsBulkActionRunning] = useState(false);
-  const [viewUserId, setViewUserId] = useState<string | null>(null);
+  const features = [
+    {
+      icon: Link,
+      title: 'Public Access Landing Pages',
+      description:
+        'Create custom landing pages (/access/[slug]) where leads request access. Drive permissions are granted automatically via API.',
+    },
+    {
+      icon: TrendingUp,
+      title: 'A/B Testing & Conversion Tracking',
+      description:
+        'Test multiple variants per campaign to optimize headlines and CTAs. Track views vs. leads to measure conversion performance.',
+    },
+    {
+      icon: Users,
+      title: 'Automated Lead Capture',
+      description:
+        'Capture leads from public access requests AND sync existing Drive permissions. Real-time Discord notifications for new leads.',
+    },
+    {
+      icon: BarChart3,
+      title: 'Analytics Dashboard',
+      description:
+        'Growth charts, campaign performance metrics, conversion rates, lead source breakdown, and time-series analytics.',
+    },
+    {
+      icon: Database,
+      title: 'Multi-Campaign Management',
+      description:
+        'Manage unlimited campaigns, each linked to different Drive folders, with independent tracking and analytics.',
+    },
+    {
+      icon: Download,
+      title: 'CRM Export Ready',
+      description:
+        'Export all leads with campaign attribution, conversion data, and timestamps. CSV format ready for any CRM or email tool.',
+    },
+  ];
 
-  const { toast } = useToast();
-  const { data, isLoading, refetch } = useUsers({
-    page: 1,
-    pageSize: 100,
-    filters: search ? { search } : undefined,
-  });
+  const testimonials = [
+    {
+      name: 'Sarah Mitchell',
+      role: 'Ops Lead',
+      company: 'CourseLaunch Studio',
+      image: '/api/placeholder/100/100',
+      quote:
+        'Automated 200+ leads in the first week with zero manual work. The A/B testing feature helped us improve conversion by 40%.',
+    },
+    {
+      name: 'David Chen',
+      role: 'Founder',
+      company: 'Notion for Notaries',
+      image: '/api/placeholder/100/100',
+      quote:
+        "Finally, a tool that grants Drive access automatically while tracking conversions. The analytics dashboard shows exactly which campaigns perform best.",
+    },
+    {
+      name: 'Emily Rodriguez',
+      role: 'Marketing Director',
+      company: 'Growth Labs',
+      image: '/api/placeholder/100/100',
+      quote:
+        'The public landing pages capture leads 24/7, and the automated access granting means I never touch Drive manually. Conversion tracking shows what works.',
+    },
+  ];
 
-  useEffect(() => {
-    async function fetchCampaigns() {
-      try {
-        const response = await fetch('/api/campaigns');
-        const result = await response.json();
-        if (result.success) {
-          setCampaigns(result.data);
-        }
-      } catch {
-        // Silently fail in production or handle appropriately
-      }
-    }
-    fetchCampaigns();
-  }, []);
-
-  const filteredUsers = useMemo(() => {
-    return (
-      data?.data.filter((user) => {
-        if (selectedCampaign === 'all') return true;
-        if (selectedCampaign === 'none') return !user.campaignId;
-        return user.campaignId === selectedCampaign;
-      }) || []
-    );
-  }, [data, selectedCampaign]);
-
-  const toggleUser = (id: string) => {
-    const next = new Set(selectedUsers);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedUsers(next);
-  };
-
-  const toggleAll = () => {
-    if (selectedUsers.size === filteredUsers.length) {
-      setSelectedUsers(new Set());
-    } else {
-      setSelectedUsers(new Set(filteredUsers.map((u) => u.id)));
-    }
-  };
-
-  const handleBulkStatusChange = async (status: string) => {
-    setIsBulkActionRunning(true);
-    try {
-      const response = await fetch('/api/users/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userIds: Array.from(selectedUsers),
-          action: status === 'revoked' ? 'delete' : 'update_status',
-          status: status,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast({
-          title: 'Action complete',
-          description:
-            result.message ||
-            `Successfully updated ${selectedUsers.size} users.`,
-        });
-        setSelectedUsers(new Set());
-        refetch();
-      } else {
-        throw new Error(result.error || 'Failed to perform bulk action');
-      }
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Bulk action failed',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Could not update selected users.',
-      });
-    } finally {
-      setIsBulkActionRunning(false);
-    }
-  };
-
-  const handleExport = () => {
-    window.location.href = '/api/users/export';
-  };
-
-  const NavButtons = ({ vertical = false }: { vertical?: boolean }) => (
-    <div
-      className={`flex ${vertical ? 'flex-col gap-3' : 'hidden items-center gap-2 lg:flex'}`}
-    >
-      <Button
-        variant="outline"
-        size={vertical ? 'lg' : 'sm'}
-        onClick={() => (window.location.href = '/campaigns')}
-        className={
-          vertical ? 'h-12 w-full justify-start rounded-xl' : 'rounded-lg'
-        }
-      >
-        <Filter className="mr-2 h-4 w-4" />
-        Campaigns
-      </Button>
-      <Button
-        variant="outline"
-        size={vertical ? 'lg' : 'sm'}
-        onClick={() => (window.location.href = '/analytics')}
-        className={
-          vertical ? 'h-12 w-full justify-start rounded-xl' : 'rounded-lg'
-        }
-      >
-        <BarChart3 className="mr-2 h-4 w-4" />
-        Analytics
-      </Button>
-      <Button
-        variant="outline"
-        size={vertical ? 'lg' : 'sm'}
-        onClick={handleExport}
-        className={
-          vertical ? 'h-12 w-full justify-start rounded-xl' : 'rounded-lg'
-        }
-      >
-        <Download className="mr-2 h-4 w-4" />
-        Export CSV
-      </Button>
-      <div className={vertical ? 'w-full' : ''}>
-        <CreateUserDialog campaigns={campaigns} />
-      </div>
-      <div className={vertical ? 'w-full' : ''}>
-        <SyncButton />
-      </div>
-      <Button
-        variant="ghost"
-        size={vertical ? 'lg' : 'sm'}
-        onClick={() => {
-          import('next-auth/react').then((mod) => mod.signOut());
-        }}
-        className={`text-red-600 hover:bg-red-50 hover:text-red-700 ${vertical ? 'h-12 w-full justify-start rounded-xl' : 'rounded-lg'}`}
-      >
-        <LogOut className="mr-2 h-4 w-4" />
-        Sign Out
-      </Button>
-    </div>
-  );
+  const faqs = [
+    {
+      question: 'How does the automated access granting work?',
+      answer:
+        'When a lead requests access on your public landing page, Access Tracker Pulse automatically grants them viewer access to your Google Drive folder via the Drive API. The process is instant and requires no manual intervention.',
+    },
+    {
+      question: 'Can I A/B test different landing page variants?',
+      answer:
+        'Yes! Each campaign supports multiple variants (A/B, C, etc.) with different headlines, CTAs, and descriptions. The system tracks views and conversions per variant so you can see which performs best.',
+    },
+    {
+      question: 'What conversion data is tracked?',
+      answer:
+        'We track views (landing page visits), leads (access requests), conversion rates, campaign attribution, timestamps, and lead sources (public request vs. Drive sync). All data is exportable to CSV.',
+    },
+    {
+      question: 'Can I sync existing Google Drive permissions to capture leads?',
+      answer:
+        'Yes! The sync feature scans your Drive folders and captures leads who already have access. This lets you build your lead database from both new requests and existing Drive permissions.',
+    },
+    {
+      question: 'How do I create a public landing page for my campaign?',
+      answer:
+        'Create a campaign in the dashboard, and it automatically generates a landing page at `/access/[slug]`. Share this URL anywhere – social media, email, ads – and leads can request access instantly.',
+    },
+    {
+      question: 'Can I export leads to my CRM or email marketing tool?',
+      answer:
+        'Yes. Export all leads to CSV with campaign attribution, conversion data, timestamps, and source information. The format is compatible with most CRMs and email marketing platforms.',
+    },
+    {
+      question: 'Is this self-hosted or a managed SaaS?',
+      answer:
+        'This repo is built to be self-hosted. You can deploy it to your own infrastructure (e.g. Vercel + Turso) and keep full control of your data and lead information.',
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-12">
-      <UserDetailSheet
-        userId={viewUserId}
-        open={!!viewUserId}
-        onOpenChange={(open) => !open && setViewUserId(null)}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      {/* Navigation */}
+      <nav className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-lg">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-purple-600">
+                <Zap className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-gray-900">Access Tracker Pulse</span>
+            </div>
 
-      {/* Header */}
-      <div className="sticky top-0 z-40 border-b bg-white">
-        <div className="container mx-auto px-4 py-3 sm:py-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="truncate text-xl font-black tracking-tight sm:text-2xl">
-                Drive Sync Dashboard
+            {/* Desktop Navigation */}
+            <div className="hidden items-center gap-8 md:flex">
+              <a href="#features" className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">
+                Features
+              </a>
+              <a href="#pricing" className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">
+                Pricing
+              </a>
+              <a href="#faq" className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">
+                FAQ
+              </a>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => (window.location.href = '/login')}
+              >
+                Sign In
+              </Button>
+              <Button 
+                size="sm" 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                onClick={() => (window.location.href = '/login')}
+              >
+                Get Started
+              </Button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6 text-gray-900" />
+              ) : (
+                <Menu className="h-6 w-6 text-gray-900" />
+              )}
+            </button>
+          </div>
+
+          {/* Mobile Navigation */}
+          {mobileMenuOpen && (
+            <div className="border-t py-4 md:hidden">
+              <div className="flex flex-col gap-4">
+                <a href="#features" className="text-sm font-medium text-gray-600">
+                  Features
+                </a>
+                <a href="#pricing" className="text-sm font-medium text-gray-600">
+                  Pricing
+                </a>
+                <a href="#faq" className="text-sm font-medium text-gray-600">
+                  FAQ
+                </a>
+                <Button 
+                  variant="ghost" 
+                  className="justify-start"
+                  onClick={() => (window.location.href = '/login')}
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600"
+                  onClick={() => (window.location.href = '/login')}
+                >
+                  Get Started
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative overflow-hidden px-4 py-20 sm:px-6 lg:px-8 lg:py-32">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-gradient-to-br from-blue-400/20 to-purple-400/20 blur-3xl" />
+        </div>
+
+        <div className="container mx-auto">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div className="text-center lg:text-left">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
+                <Sparkles className="h-4 w-4" />
+                Automated lead generation platform
+              </div>
+              <h1 className="mb-6 text-4xl font-extrabold leading-tight tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
+                Turn Google Drive into
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {' '}
+                  an automated lead generation machine
+                </span>
               </h1>
-              <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wide text-gray-400 text-muted-foreground sm:text-xs">
-                Manage Google Drive folder permissions and lead access
+              <p className="mb-8 text-lg text-gray-600 sm:text-xl">
+                Create public landing pages, automatically grant Drive access when leads request it, track conversions with A/B testing, and get real-time analytics – all fully automated.
+              </p>
+              <div className="flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
+                <Button
+                  size="lg"
+                  className="group bg-gradient-to-r from-blue-600 to-purple-600 text-base hover:from-blue-700 hover:to-purple-700"
+                  onClick={() => (window.location.href = '/dashboard')}
+                >
+                  Open Dashboard
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="text-base"
+                  onClick={() => (window.location.href = '/README_PRO')}
+                >
+                  View Setup Guide
+                </Button>
+              </div>
+              <p className="mt-4 text-sm text-gray-500">
+                Fully automated • A/B testing included • Real-time conversion tracking • Zero manual work required
               </p>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <NavButtons />
-              <div className="lg:hidden">
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 rounded-xl border-gray-200 shadow-sm"
-                    >
-                      <Menu className="h-5 w-5" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-[300px] sm:w-[350px]">
-                    <SheetHeader className="pb-6 text-left">
-                      <SheetTitle className="text-2xl font-black">
-                        Menu
-                      </SheetTitle>
-                      <SheetDescription>
-                        Manage your campaigns and settings
-                      </SheetDescription>
-                    </SheetHeader>
-                    <NavButtons vertical />
-                  </SheetContent>
-                </Sheet>
+            <div className="relative">
+              <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-blue-400/30 to-purple-400/30 blur-2xl" />
+              <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop"
+                  alt="Dashboard Preview"
+                  className="h-full w-full object-cover"
+                />
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="container mx-auto space-y-6 px-4 py-6 sm:space-y-8 sm:py-8">
-        <StatsCards />
+      {/* How It Works */}
+      <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
+        <div className="container mx-auto">
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
+              How Access Tracker Pulse Works
+            </h2>
+            <p className="text-lg text-gray-600">
+              From campaign setup to lead capture and conversion tracking – all fully automated.
+            </p>
+          </div>
 
-        {/* Getting Started guide */}
-        <Card className="overflow-hidden rounded-2xl border-none bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle>Getting Started</CardTitle>
-            <CardDescription>
-              Launch your campaign in 3 simple steps.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 text-sm text-slate-600 md:grid-cols-3">
-            <div>
-              <h3 className="mb-1 font-semibold">
-                1. Sign in with Google
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            <div className="relative text-center">
+              <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-2xl font-bold text-white shadow-lg">
+                1
+              </div>
+              <h3 className="mb-3 text-xl font-bold text-gray-900">
+                Connect Google Drive
               </h3>
-              <p>
-                Connect your Google account to enable secure access to your Drive folders.
+              <p className="text-gray-600">
+                Sign in with Google and approve Drive access for automated permission granting.
               </p>
+              {/* Connector line for desktop */}
+              <div className="absolute left-full top-8 hidden h-0.5 w-full bg-gradient-to-r from-blue-300 to-purple-300 lg:block" />
             </div>
-            <div>
-              <h3 className="mb-1 font-semibold">2. Connect a Folder</h3>
-              <p>
-                Select the Google Drive folder you want to track leads for.
-              </p>
-            </div>
-            <div>
-              <h3 className="mb-1 font-semibold">3. Share & Track</h3>
-              <p>
-                Share your unique access link and watch leads roll in automatically.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <Card className="h-full overflow-hidden rounded-2xl border-none shadow-sm">
-              <CardHeader className="border-b border-gray-100 bg-white p-4 sm:p-6">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg font-bold sm:text-xl">
-                        User Directory
-                      </CardTitle>
-                      <CardDescription className="text-xs sm:text-sm">
-                        {filteredUsers.length} users in current view
-                      </CardDescription>
-                    </div>
-                    {selectedUsers.size > 0 && (
-                      <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              disabled={isBulkActionRunning}
-                              className="h-8 rounded-lg bg-slate-900 sm:h-9"
-                            >
-                              {isBulkActionRunning ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              ) : null}
-                              <span className="hidden sm:inline">
-                                Bulk Actions
-                              </span>
-                              <span className="sm:hidden">Actions</span> (
-                              {selectedUsers.size})
-                              <ChevronDown className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel>
-                              Modify Selection
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleBulkStatusChange('active')}
-                            >
-                              <ShieldCheck className="mr-2 h-4 w-4 text-emerald-500" />{' '}
-                              Grant Access
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleBulkStatusChange('suspended')
-                              }
-                            >
-                              <ShieldAlert className="mr-2 h-4 w-4 text-orange-500" />{' '}
-                              Suspend Access
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => handleBulkStatusChange('revoked')}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete Users
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    )}
+            <div className="relative text-center">
+              <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 text-2xl font-bold text-white shadow-lg">
+                2
+              </div>
+              <h3 className="mb-3 text-xl font-bold text-gray-900">
+                Create Campaigns
+              </h3>
+              <p className="text-gray-600">
+                Set up campaigns with custom landing pages (/access/[slug]) and optionally create A/B test variants.
+              </p>
+              {/* Connector line for desktop */}
+              <div className="absolute left-full top-8 hidden h-0.5 w-full bg-gradient-to-r from-purple-300 to-pink-300 lg:block" />
+            </div>
+
+            <div className="relative text-center">
+              <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-pink-600 text-2xl font-bold text-white shadow-lg">
+                3
+              </div>
+              <h3 className="mb-3 text-xl font-bold text-gray-900">
+                Share & Capture Leads
+              </h3>
+              <p className="text-gray-600">
+                Share your landing page URL; leads request access, and Drive permissions are granted automatically.
+              </p>
+              {/* Connector line for desktop */}
+              <div className="absolute left-full top-8 hidden h-0.5 w-full bg-gradient-to-r from-pink-300 to-orange-300 lg:block" />
+            </div>
+
+            <div className="text-center">
+              <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-2xl font-bold text-white shadow-lg">
+                4
+              </div>
+              <h3 className="mb-3 text-xl font-bold text-gray-900">
+                Track & Analyze
+              </h3>
+              <p className="text-gray-600">
+                View conversion rates, campaign performance, growth charts, and export leads to CSV.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="container mx-auto">
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
+              Built for automated lead generation & conversion tracking
+            </h2>
+            <p className="text-lg text-gray-600">
+              Everything you need to capture leads, track conversions, run A/B tests, and grow your audience automatically.
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature, index) => (
+              <Card
+                key={index}
+                className="group border-none bg-white shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+              >
+                <CardContent className="p-6">
+                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 transition-transform group-hover:scale-110">
+                    <feature.icon className="h-6 w-6 text-blue-600" />
                   </div>
+                  <h3 className="mb-2 text-xl font-bold text-gray-900">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-600">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:items-center">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        placeholder="Search users..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="h-10 rounded-xl border-gray-100 bg-gray-50/50 pl-9 transition-all focus:bg-white"
+      {/* Testimonials */}
+      <section className="bg-gradient-to-br from-gray-50 to-blue-50 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="container mx-auto">
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
+              Loved by teams who live in Google Drive
+            </h2>
+            <p className="text-lg text-gray-600">
+              See how Access Tracker Pulse helps creators and operators stay in control of access.
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-3">
+            {testimonials.map((testimonial, index) => (
+              <Card key={index} className="border-none bg-white shadow-lg">
+                <CardContent className="p-6">
+                  <div className="mb-4 flex items-center gap-1 text-yellow-400">
+                    {[...Array(5)].map((_, i) => (
+                      <svg
+                        key={i}
+                        className="h-5 w-5 fill-current"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <p className="mb-6 text-gray-700">&ldquo;{testimonial.quote}&rdquo;</p>
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 overflow-hidden rounded-full bg-gradient-to-br from-blue-400 to-purple-400">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`https://i.pravatar.cc/150?img=${index + 1}`}
+                        alt={testimonial.name}
+                        className="h-full w-full object-cover"
                       />
                     </div>
-                    <select
-                      value={selectedCampaign}
-                      onChange={(e) => setSelectedCampaign(e.target.value)}
-                      className="h-10 rounded-xl border border-gray-100 bg-gray-50/50 px-3 py-1 text-sm shadow-sm transition-all focus:bg-white focus:outline-none"
-                    >
-                      <option value="all">All Campaigns</option>
-                      <option value="none">Manual / Untagged</option>
-                      {campaigns.map((campaign) => (
-                        <option key={campaign.id} value={campaign.id}>
-                          {campaign.name}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleAll}
-                      className="h-10 rounded-xl px-4 font-bold text-blue-600 hover:bg-blue-50"
-                    >
-                      {selectedUsers.size === filteredUsers.length &&
-                      filteredUsers.length > 0
-                        ? 'Deselect Items'
-                        : 'Select All Items'}
-                    </Button>
+                    <div>
+                      <div className="font-bold text-gray-900">
+                        {testimonial.name}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {testimonial.role}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {/* Desktop Table View */}
-                <div className="hidden md:block">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                        <TableHead className="w-12 px-4">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={toggleAll}
-                            disabled={isLoading || filteredUsers.length === 0}
-                          >
-                            {selectedUsers.size === filteredUsers.length &&
-                            filteredUsers.length > 0 ? (
-                              <CheckSquare className="h-4 w-4 text-blue-600" />
-                            ) : (
-                              <Square className="h-4 w-4 text-gray-300" />
-                            )}
-                          </Button>
-                        </TableHead>
-                        <TableHead className="font-bold text-gray-900">
-                          Email
-                        </TableHead>
-                        <TableHead className="font-bold text-gray-900">
-                          Name
-                        </TableHead>
-                        <TableHead className="font-bold text-gray-900">
-                          Source
-                        </TableHead>
-                        <TableHead className="font-bold text-gray-900">
-                          Status
-                        </TableHead>
-                        <TableHead className="pr-6 text-right font-bold text-gray-900">
-                          Last Synced
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="h-48 text-center">
-                            <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" />
-                            <p className="mt-3 text-sm font-medium">
-                              Loading sync data...
-                            </p>
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredUsers.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={6}
-                            className="h-48 text-center text-muted-foreground"
-                          >
-                            <Database className="mx-auto mb-2 h-10 w-10 opacity-20" />
-                            <p>No users found. Run a sync to fetch users.</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredUsers.map((user) => {
-                          const userCampaign = campaigns.find(
-                            (c) => c.id === user.campaignId
-                          );
-                          const isSelected = selectedUsers.has(user.id);
-                          return (
-                            <TableRow
-                              key={user.id}
-                              className={`h-16 cursor-pointer ${isSelected ? 'bg-blue-50/30' : 'hover:bg-gray-50/40'}`}
-                              onClick={() => setViewUserId(user.id)}
-                            >
-                              <TableCell
-                                className="px-4"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => toggleUser(user.id)}
-                                >
-                                  {isSelected ? (
-                                    <CheckSquare className="h-4 w-4 text-blue-600" />
-                                  ) : (
-                                    <Square className="h-4 w-4 text-gray-200" />
-                                  )}
-                                </Button>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-100">
-                                    {user.image ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img
-                                        src={user.image}
-                                        alt=""
-                                        className="h-full w-full rounded-full object-cover"
-                                      />
-                                    ) : (
-                                      <UserIcon className="h-4 w-4 text-gray-400" />
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="text-sm font-bold text-gray-900">
-                                      {user.name || 'Anonymous'}
-                                    </div>
-                                    <div className="text-[11px] font-medium text-gray-400">
-                                      {user.email}
-                                    </div>
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {userCampaign ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="bg-white text-[10px] font-bold uppercase text-gray-600"
-                                  >
-                                    {userCampaign.name}
-                                  </Badge>
-                                ) : (
-                                  '—'
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm font-bold text-gray-700">
-                                  {user.company || '—'}
-                                </div>
-                                <div className="text-[10px] font-medium uppercase tracking-tight text-gray-400">
-                                  {user.jobTitle || 'Lead'}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  className={`rounded-full px-2 py-0 text-[10px] font-bold uppercase ${user.status === 'active' ? 'bg-emerald-100 text-emerald-700' : user.status === 'suspended' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}
-                                >
-                                  {user.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="pr-6 text-right text-xs font-medium text-gray-400">
-                                {user.lastSyncedAt
-                                  ? formatDate(user.lastSyncedAt)
-                                  : 'Pending...'}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-                {/* Mobile Card List View */}
-                <div className="divide-y divide-gray-100 md:hidden">
-                  {isLoading ? (
-                    <div className="p-12 text-center text-muted-foreground">
-                      <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin text-blue-600" />{' '}
-                      Loading...
-                    </div>
-                  ) : filteredUsers.length === 0 ? (
-                    <div className="p-12 text-center text-muted-foreground">
-                      No users found.
-                    </div>
-                  ) : (
-                    filteredUsers.map((user) => {
-                      const userCampaign = campaigns.find(
-                        (c) => c.id === user.campaignId
-                      );
-                      const isSelected = selectedUsers.has(user.id);
-                      return (
-                        <div
-                          key={user.id}
-                          className={`flex gap-4 p-4 transition-colors active:bg-gray-50 ${isSelected ? 'bg-blue-50/50' : ''}`}
-                          onClick={() => setViewUserId(user.id)}
-                        >
-                          <div
-                            className="mt-1"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => toggleUser(user.id)}
-                            >
-                              {isSelected ? (
-                                <CheckSquare className="h-4 w-4 text-blue-600" />
-                              ) : (
-                                <Square className="h-4 w-4 text-gray-200" />
-                              )}
-                            </Button>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex items-center justify-between gap-2">
-                              <div className="truncate font-bold text-gray-900">
-                                {user.name || 'Anonymous'}
-                              </div>
-                              <Badge
-                                className={`shrink-0 rounded-full px-2 py-0 text-[9px] font-bold uppercase ${user.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
-                              >
-                                {user.status}
-                              </Badge>
-                            </div>
-                            <div className="mb-2 flex items-center truncate text-xs text-gray-400">
-                              <Mail className="mr-1 h-3 w-3" /> {user.email}
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {userCampaign && (
-                                <Badge
-                                  variant="secondary"
-                                  className="border-none bg-gray-100 px-1.5 py-0 text-[10px] font-medium text-gray-600 shadow-none"
-                                >
-                                  {userCampaign.name}
-                                </Badge>
-                              )}
-                              {user.company && (
-                                <div className="flex items-center rounded-md border border-gray-100 bg-gray-50 px-1.5 py-0.5 text-[10px] text-gray-500">
-                                  <Briefcase className="mr-1 h-2.5 w-2.5" />{' '}
-                                  {user.company}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+      {/* Pricing */}
+      <section id="pricing" className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="container mx-auto">
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
+              Use it internally, or as a SaaS for your clients
+            </h2>
+            <p className="text-lg text-gray-600">
+              Start with an internal “ops” deployment and grow into a multi‑campaign lead tracker.
+            </p>
+          </div>
+
+          <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-2">
+            {/* Free Plan */}
+            <Card className="border-2 border-gray-200 bg-white shadow-lg">
+              <CardContent className="p-8">
+                <h3 className="mb-2 text-2xl font-bold text-gray-900">Internal</h3>
+                <div className="mb-6">
+                  <span className="text-5xl font-bold text-gray-900">$0</span>
+                  <span className="text-gray-600">/month</span>
                 </div>
+                <p className="mb-6 text-gray-600">
+                  Perfect for using Access Tracker Pulse as a private internal tool.
+                </p>
+                <ul className="mb-8 space-y-4">
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">Single workspace, manual sync</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">Access dashboard & CSV export</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">Email/Discord alerts (manual setup)</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">Great for ops, RevOps, and security teams</span>
+                  </li>
+                </ul>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  size="lg"
+                  onClick={() => (window.location.href = '/login')}
+                >
+                  Get Started Free
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Pro Plan */}
+            <Card className="relative border-2 border-blue-500 bg-white shadow-2xl">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-1 text-sm font-bold text-white">
+                  MOST POPULAR
+                </span>
+              </div>
+              <CardContent className="p-8">
+                <h3 className="mb-2 text-2xl font-bold text-gray-900">Creator / Team</h3>
+                <div className="mb-6">
+                  <span className="text-5xl font-bold text-gray-900">$12</span>
+                  <span className="text-gray-600">/month</span>
+                </div>
+                <p className="mb-6 text-gray-600">
+                  For creators and teams who want campaign‑level insights and automation.
+                </p>
+                <ul className="mb-8 space-y-4">
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">
+                      <strong>Unlimited goals</strong>
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">
+                      Campaign analytics & growth insights
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">Multi‑campaign & multi‑workspace support</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">Scheduled and cron‑based sync</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">Priority support</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="h-6 w-6 shrink-0 text-green-500" />
+                    <span className="text-gray-700">Export, webhooks & integrations</span>
+                  </li>
+                </ul>
+                <Button
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  size="lg"
+                  onClick={() => (window.location.href = '/login')}
+                >
+                  Start Free Trial
+                </Button>
               </CardContent>
             </Card>
           </div>
-          <div className="lg:col-span-1">
-            <ActivityFeed />
-          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Floating Selection Bar */}
-      {selectedUsers.size > 0 && (
-        <div className="fixed bottom-6 left-4 right-4 z-50 flex items-center justify-between gap-4 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-2xl duration-500 animate-in slide-in-from-bottom-8 md:left-1/2 md:right-auto md:-translate-x-1/2 md:justify-start">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold leading-none">
-              {selectedUsers.size}
-            </div>
-            <div className="text-sm font-bold">Selected</div>
+      {/* FAQ */}
+      <section id="faq" className="bg-white px-4 py-20 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-3xl">
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-lg text-gray-600">
+              Everything you need to know about using Access Tracker Pulse with Google Drive
+            </p>
           </div>
-          <div className="hidden h-4 w-px bg-slate-700 md:block"></div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 px-3 text-white hover:bg-white/10"
-              onClick={toggleAll}
-            >
-              Deselect
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-9 rounded-xl bg-blue-600 hover:bg-blue-700"
+
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <div
+                key={index}
+                className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+              >
+                <button
+                  className="flex w-full items-center justify-between p-6 text-left"
+                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
                 >
-                  Action <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={() => handleBulkStatusChange('active')}
-                >
-                  Grant Access
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleBulkStatusChange('suspended')}
-                >
-                  Suspend
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-red-600"
-                  onClick={() => handleBulkStatusChange('revoked')}
-                >
-                  Delete Selected
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <span className="text-lg font-semibold text-gray-900">
+                    {faq.question}
+                  </span>
+                  <ChevronDown
+                    className={`h-5 w-5 text-gray-500 transition-transform ${
+                      openFaq === index ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                {openFaq === index && (
+                  <div className="border-t border-gray-100 bg-gray-50 p-6">
+                    <p className="text-gray-700">{faq.answer}</p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
-      )}
+      </section>
+
+      {/* Final CTA */}
+      <section className="bg-gradient-to-br from-blue-600 to-purple-600 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="container mx-auto text-center">
+          <h2 className="mb-6 text-3xl font-bold text-white sm:text-4xl lg:text-5xl">
+            Ready to automate your lead generation?
+          </h2>
+          <p className="mb-8 text-xl text-blue-100">
+            Join creators who capture leads automatically, track conversions with A/B testing, and grant access instantly – all with zero manual work.
+          </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
+            <Button
+              size="lg"
+              className="bg-white text-lg text-blue-600 hover:bg-gray-100"
+              onClick={() => (window.location.href = '/')}
+            >
+              Open Dashboard
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-2 border-white bg-transparent text-lg text-white hover:bg-white/10"
+            >
+              Schedule a Demo
+            </Button>
+          </div>
+          <p className="mt-6 text-sm text-blue-100">
+            Self-hosted by you • Uses your own Google Cloud project • Turn off access anytime
+          </p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t bg-gray-900 px-4 py-12 text-gray-400 sm:px-6 lg:px-8">
+        <div className="container mx-auto">
+          <div className="grid gap-8 md:grid-cols-4">
+            <div>
+              <div className="mb-4 flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-lg font-bold text-white">Access Tracker Pulse</span>
+              </div>
+              <p className="text-sm">
+                Helping you see and control who can access your Google Drive content.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="mb-4 font-semibold text-white">Product</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="#features" className="hover:text-white">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="#pricing" className="hover:text-white">
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Integrations
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Changelog
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="mb-4 font-semibold text-white">Company</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="#" className="hover:text-white">
+                    About
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Blog
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Careers
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Contact
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="mb-4 font-semibold text-white">Legal</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Cookie Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    GDPR
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-12 border-t border-gray-800 pt-8 text-center text-sm">
+            <p>© 2024 Access Tracker Pulse. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
