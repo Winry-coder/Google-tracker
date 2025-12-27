@@ -23,6 +23,7 @@ function LoginForm() {
   const error = searchParams.get('error');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -157,7 +158,12 @@ function LoginForm() {
                 type="button"
                 variant="outline"
                 className="w-full h-11 border-gray-300 hover:bg-gray-50"
-                onClick={() => signIn('google', { callbackUrl: '/onboarding' })}
+                disabled={isGoogleLoading}
+                onClick={async () => {
+                  if (isGoogleLoading) return;
+                  setIsGoogleLoading(true);
+                  await signIn('google', { callbackUrl: '/onboarding' });
+                }}
               >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path

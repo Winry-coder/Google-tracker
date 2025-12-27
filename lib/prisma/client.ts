@@ -12,7 +12,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const connectionString = process.env.TURSO_DATABASE_URL ?? 'file:./dev.db';
+const connectionString = process.env.TURSO_DATABASE_URL ?? 'file:./prisma/dev.db';
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
 // Check if we're using a remote Turso database or local file
