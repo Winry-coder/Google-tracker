@@ -119,7 +119,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      data: campaigns.map((c) => ({
+      data: campaigns.map((c: { _count: { users: number }; [key: string]: unknown }) => ({
           ...c,
           totalLeads: c._count.users,
       })),
