@@ -45,7 +45,7 @@ export async function enrichLeadData(
 
     const companyGuess = rawCompany
       .split('-')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
 
     // 2. Placeholder for future API integration

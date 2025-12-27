@@ -90,8 +90,8 @@ export async function PATCH(
 
     if (variants) {
       const incomingIds = variants
-        .filter((v) => v.id)
-        .map((v) => v.id as string);
+        .filter((v: { id?: string }) => v.id)
+        .map((v: { id?: string }) => v.id as string);
 
       // Remove variants not in the incoming list
       await prisma.variant.deleteMany({

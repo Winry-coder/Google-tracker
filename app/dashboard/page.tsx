@@ -29,6 +29,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import type { User } from '@/types/user';
 import { useUsers } from '@/hooks/use-users';
 import { SyncButton } from '@/components/sync/sync-button';
 import { StatsCards } from '@/components/dashboard/stats-cards';
@@ -108,7 +109,7 @@ export default function DashboardPage(): JSX.Element {
 
   const filteredUsers = useMemo(() => {
     return (
-      data?.data.filter((user) => {
+      data?.data.filter((user: User) => {
         if (selectedCampaign === 'all') return true;
         if (selectedCampaign === 'none') return !user.campaignId;
         return user.campaignId === selectedCampaign;
@@ -127,7 +128,7 @@ export default function DashboardPage(): JSX.Element {
     if (selectedUsers.size === filteredUsers.length) {
       setSelectedUsers(new Set());
     } else {
-      setSelectedUsers(new Set(filteredUsers.map((u) => u.id)));
+      setSelectedUsers(new Set(filteredUsers.map((u: User) => u.id)));
     }
   };
 
@@ -415,7 +416,7 @@ export default function DashboardPage(): JSX.Element {
                     >
                       <option value="all">All Campaigns</option>
                       <option value="none">Manual / Untagged</option>
-                      {campaigns.map((campaign) => (
+                      {campaigns.map((campaign: Campaign) => (
                         <option key={campaign.id} value={campaign.id}>
                           {campaign.name}
                         </option>
@@ -495,9 +496,9 @@ export default function DashboardPage(): JSX.Element {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredUsers.map((user) => {
+                        filteredUsers.map((user: User) => {
                           const userCampaign = campaigns.find(
-                            (c) => c.id === user.campaignId
+                            (c: Campaign) => c.id === user.campaignId
                           );
                           const isSelected = selectedUsers.has(user.id);
                           return (
@@ -599,9 +600,9 @@ export default function DashboardPage(): JSX.Element {
                       No users found.
                     </div>
                   ) : (
-                    filteredUsers.map((user) => {
+                    filteredUsers.map((user: User) => {
                       const userCampaign = campaigns.find(
-                        (c) => c.id === user.campaignId
+                        (c: Campaign) => c.id === user.campaignId
                       );
                       const isSelected = selectedUsers.has(user.id);
                       return (

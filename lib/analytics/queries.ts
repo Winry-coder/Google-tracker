@@ -70,7 +70,7 @@ export async function getOverviewStats(): Promise<OverviewStats> {
     },
   });
 
-  const sources = sourcesGrouped.map((s) => ({
+  const sources = sourcesGrouped.map((s: { source: string; _count: { source: number } }) => ({
     source: s.source || 'unknown',
     count: s._count.source,
   }));
@@ -92,7 +92,7 @@ export async function getOverviewStats(): Promise<OverviewStats> {
     take: 3,
   });
 
-  const topCampaigns = campaignsGrouped.map((c) => ({
+  const topCampaigns = campaignsGrouped.map((c: { name: string; _count: { users: number } }) => ({
     name: c.name,
     count: c._count.users,
   }));
@@ -164,7 +164,15 @@ export async function getCampaignsAnalytics() {
     },
   });
 
-  return campaigns.map((campaign) => {
+  return campaigns.map((campaign: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+    updatedAt: Date;
+    _count: { users: number };
+    users: { id: string }[];
+  }) => {
     const totalLeads = campaign._count.users;
     const newLeads30d = campaign.users.length;
 

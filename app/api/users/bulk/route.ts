@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
     if (needsRevocation) {
       await Promise.allSettled(
-        (users as unknown as BulkUser[]).map(async (user) => {
+        (users as unknown as BulkUser[]).map(async (user: BulkUser) => {
           if (user.drivePermissionId && user.campaign?.folderId) {
             try {
               await revokePermission(

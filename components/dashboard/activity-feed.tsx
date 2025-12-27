@@ -88,7 +88,7 @@ export function ActivityFeed() {
         <ScrollArea className="h-[400px]">
           <div className="divide-y divide-gray-50">
             {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
+              Array.from({ length: 5 }).map((_: unknown, i: number) => (
                 <div key={i} className="flex animate-pulse gap-3 p-4">
                   <div className="h-8 w-8 rounded-full bg-slate-100" />
                   <div className="flex-1 space-y-2">
@@ -102,7 +102,7 @@ export function ActivityFeed() {
                 <p className="text-sm font-medium">No recent activity</p>
               </div>
             ) : (
-              activities.map((activity) => (
+              activities.map((activity: Activity) => (
                 <div
                   key={activity.id}
                   className="group flex gap-3 p-4 transition-colors hover:bg-slate-50/50"

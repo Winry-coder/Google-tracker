@@ -201,7 +201,13 @@ export async function POST(request: Request) {
         variants:
           variants && variants.length > 0
             ? {
-                create: variants.map((v) => ({
+                create: variants.map((v: {
+                  name: string;
+                  title?: string | null;
+                  description?: string | null;
+                  buttonText?: string | null;
+                  isActive?: boolean;
+                }) => ({
                   name: v.name,
                   title: v.title,
                   description: v.description,
