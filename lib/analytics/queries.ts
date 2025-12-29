@@ -174,7 +174,7 @@ export async function getCampaignsAnalytics() {
     },
   });
 
-  return campaigns.map((campaign: any) => {
+  return campaigns.map((campaign) => {
     const totalLeads = campaign._count.users;
     const newLeads30d = campaign.users.length;
 
@@ -182,7 +182,7 @@ export async function getCampaignsAnalytics() {
     const growth = totalLeads > 0 ? (newLeads30d / totalLeads) * 100 : 0;
 
     // Calculate variant metrics
-    const variants = (campaign.variants || []).map((v: any) => {
+    const variants = (campaign.variants || []).map((v) => {
       const conversionCount = v._count.users;
       const conversionRate = v.viewCount > 0 ? (conversionCount / v.viewCount) * 100 : 0;
       
