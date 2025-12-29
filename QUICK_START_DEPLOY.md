@@ -30,7 +30,7 @@ Go to: https://console.cloud.google.com/
    - Google People API
 3. Create OAuth Credential:
    - Type: Web application
-   - Add Authorized Redirect URIs:
+   - **⚠️ CRITICAL: Add Authorized Redirect URIs:**
      - `http://localhost:3000/api/auth/callback/google` (local testing)
      - `https://yourdomain.com/api/auth/callback/google` (production)
 4. Copy credentials:
@@ -38,6 +38,8 @@ Go to: https://console.cloud.google.com/
    GOOGLE_CLIENT_ID = your_long_id.apps.googleusercontent.com
    GOOGLE_CLIENT_SECRET = your_secret_key
    ```
+
+**🚨 IMPORTANT:** Without the correct redirect URIs, Google OAuth will fail with "redirect_uri_mismatch" error!
 
 ---
 
