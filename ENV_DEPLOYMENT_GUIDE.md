@@ -27,6 +27,15 @@ This guide walks you through configuring every environment variable needed to de
 - [ ] `RESEND_API_KEY` - Email service
 - [ ] `CLEARBIT_API_KEY` - Lead enrichment
 
+### **Not Needed for Basic Deployment**
+- [ ] `GOOGLE_REDIRECT_URI` - Handled by NextAuth automatically
+- [ ] `GOOGLE_REFRESH_TOKEN` - Only for background sync without user login
+- [ ] `GOOGLE_DRIVE_FOLDER_ID` - Set per user/campaign in app
+- [ ] `EMAIL_SERVER_*` - Use RESEND_API_KEY instead
+- [ ] `DEFAULT_USER_ROLE` - Has default value (viewer)
+- [ ] `OTEL_*` - Only for advanced telemetry
+- [ ] `NEXT_PUBLIC_API_URL` - Usually same as NEXTAUTH_URL
+
 ---
 
 ## 🔑 Generating Required Secrets
@@ -434,10 +443,17 @@ pnpm prisma db push
 | `TURSO_AUTH_TOKEN` | Turso token | ✅ (if Turso) | `token_...` |
 | `TOKEN_ENCRYPTION_KEY` | Token encryption | 🟡 Recommended | `8Jk7mP2q...` |
 | `CRON_SECRET` | Sync endpoint key | 🟡 Recommended | `8Jk7mP2q...` |
-| `NEXT_PUBLIC_API_URL` | Public API URL | ✅ Yes | `https://app.example.com` |
+| `NEXT_PUBLIC_API_URL` | Public API URL | 🟡 Usually same as NEXTAUTH_URL | `https://app.example.com` |
+| `GOOGLE_REDIRECT_URI` | OAuth redirect | ❌ Not needed (auto-handled) | - |
+| `GOOGLE_REFRESH_TOKEN` | Background sync | ❌ Optional (advanced) | - |
+| `GOOGLE_DRIVE_FOLDER_ID` | Default folder | ❌ Set in app per user | - |
+| `DEFAULT_USER_ROLE` | Default role | ❌ Has default (viewer) | - |
 | `DISCORD_WEBHOOK_URL` | Discord notifications | ⚪ Optional | `https://discord.com/api/webhooks/...` |
 | `SLACK_WEBHOOK_URL` | Slack notifications | ⚪ Optional | `https://hooks.slack.com/...` |
 | `RESEND_API_KEY` | Email service | ⚪ Optional (Phase 4) | `re_...` |
+| `EMAIL_SERVER_*` | Email config | ❌ Use RESEND_API_KEY instead | - |
+| `OTEL_*` | Telemetry | ❌ Optional (advanced) | - |
+| `CLEARBIT_API_KEY` | Lead enrichment | ⚪ Optional (Phase 4) | `sk_...` |
 
 ---
 

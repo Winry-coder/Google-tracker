@@ -127,6 +127,42 @@ https://your-project.vercel.app
 
 ---
 
+## 📋 Complete Environment Variables List
+
+### **Required (9 variables)**
+```env
+NEXTAUTH_SECRET = [generated]
+NEXTAUTH_URL = https://your-project.vercel.app
+GOOGLE_CLIENT_ID = [from Google Console]
+GOOGLE_CLIENT_SECRET = [from Google Console]
+TURSO_DATABASE_URL = [from Turso]
+TURSO_AUTH_TOKEN = [from Turso]
+DATABASE_URL = [combine above two]
+TOKEN_ENCRYPTION_KEY = [generated]
+CRON_SECRET = [generated]
+NEXT_PUBLIC_API_URL = https://your-project.vercel.app
+```
+
+### **Optional (you can add later)**
+```env
+DISCORD_WEBHOOK_URL = https://discord.com/api/webhooks/...  # Lead notifications
+SLACK_WEBHOOK_URL = https://hooks.slack.com/...           # Lead notifications
+RESEND_API_KEY = re_...                                    # Email service
+CLEARBIT_API_KEY = sk_...                                  # Lead enrichment
+```
+
+### **Not Needed**
+```env
+GOOGLE_REDIRECT_URI = # Handled automatically by NextAuth
+GOOGLE_REFRESH_TOKEN = # Only for advanced background sync
+GOOGLE_DRIVE_FOLDER_ID = # Set per user in the app
+DEFAULT_USER_ROLE = # Has default value (viewer)
+EMAIL_SERVER_* = # Use RESEND_API_KEY instead
+OTEL_* = # Advanced telemetry only
+```
+
+---
+
 ## 📚 Need More Details?
 
 All environment variables documented in:
