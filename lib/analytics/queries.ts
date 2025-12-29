@@ -148,6 +148,16 @@ export async function getCampaignsAnalytics() {
       _count: {
         select: { users: true },
       },
+      variants: {
+        select: {
+          id: true,
+          name: true,
+          viewCount: true,
+          _count: {
+            select: { users: true },
+          },
+        },
+      },
       users: {
         where: {
           createdAt: {
@@ -164,21 +174,26 @@ export async function getCampaignsAnalytics() {
     },
   });
 
-  return campaigns.map((campaign: {
-    id: string;
-    name: string;
-    slug: string;
-    isActive: boolean;
-    updatedAt: Date;
-    _count: { users: number };
-    users: { id: string }[];
-  }) => {
+  return campaigns.map((campaign: any) => {
     const totalLeads = campaign._count.users;
     const newLeads30d = campaign.users.length;
 
     // Simple growth calculation for the campaign
-    // (In a real app, you'd compare current 30d vs previous 30d)
     const growth = totalLeads > 0 ? (newLeads30d / totalLeads) * 100 : 0;
+
+    // Calculate variant metrics
+    const variants = (campaign.variants || []).map((v: any) => {
+      const conversionCount = v._count.users;
+      const conversionRate = v.viewCount > 0 ? (conversionCount / v.viewCount) * 100 : 0;
+      
+      return {
+        id: v.id,
+        name: v.name,
+        viewCount: v.viewCount,
+        conversionCount,
+        conversionRate: Math.round(conversionRate * 10) / 10,
+      };
+    });
 
     return {
       id: campaign.id,
@@ -189,6 +204,7 @@ export async function getCampaignsAnalytics() {
       newLeads30d,
       growth: Math.round(growth * 10) / 10,
       lastUpdated: campaign.updatedAt,
+      variants,
     };
   });
 }

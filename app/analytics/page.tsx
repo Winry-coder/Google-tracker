@@ -56,6 +56,13 @@ interface CampaignStat {
   newLeads30d: number;
   growth: number;
   lastUpdated: string;
+  variants?: {
+    id: string;
+    name: string;
+    viewCount: number;
+    conversionCount: number;
+    conversionRate: number;
+  }[];
 }
 
 export default function AnalyticsPage() {
@@ -363,59 +370,100 @@ export default function AnalyticsPage() {
               </TableHeader>
               <TableBody>
                 {campaigns.map((campaign) => (
-                  <TableRow
-                    key={campaign.id}
-                    className="h-16 transition-colors hover:bg-slate-50/50"
-                  >
-                    <TableCell className="font-bold text-slate-900">
-                      {campaign.name}
-                      <div className="mt-0.5 text-[10px] font-medium tracking-tight text-slate-400">
-                        slug: /{campaign.slug}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={campaign.isActive ? 'default' : 'secondary'}
-                        className={`rounded-full border-0 px-2 py-0 text-[10px] font-bold uppercase ${campaign.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
-                      >
-                        {campaign.isActive ? 'Active' : 'Paused'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-bold text-slate-900">
-                      {campaign.totalLeads}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-900">
-                          {campaign.newLeads30d}
-                        </span>
-                        {campaign.newLeads30d > 0 && (
-                          <Badge className="h-4 border-blue-100 bg-blue-50 py-0 text-[9px] font-bold text-blue-700 hover:bg-blue-50">
-                            +
-                            {Math.round(
-                              (campaign.newLeads30d /
-                                (campaign.totalLeads || 1)) *
-                                100
-                            )}
-                            %
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div
-                        className={`flex items-center gap-1 text-sm font-black ${campaign.growth > 0 ? 'text-emerald-600' : 'text-slate-400'}`}
-                      >
-                        {campaign.growth > 0 ? (
-                          <ArrowUpRight className="h-4 w-4" />
-                        ) : null}
-                        {campaign.growth}%
-                      </div>
-                    </TableCell>
-                    <TableCell className="pr-6 text-right text-xs font-medium text-slate-400">
-                      {formatDate(campaign.lastUpdated)}
-                    </TableCell>
-                  </TableRow>
+                  <>
+                    <TableRow
+                      key={campaign.id}
+                      className="h-16 transition-colors hover:bg-slate-50/50"
+                    >
+                      <TableCell className="font-bold text-slate-900">
+                        {campaign.name}
+                        <div className="mt-0.5 text-[10px] font-medium tracking-tight text-slate-400">
+                          slug: /{campaign.slug}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={campaign.isActive ? 'default' : 'secondary'}
+                          className={`rounded-full border-0 px-2 py-0 text-[10px] font-bold uppercase ${campaign.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
+                        >
+                          {campaign.isActive ? 'Active' : 'Paused'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-bold text-slate-900">
+                        {campaign.totalLeads}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-900">
+                            {campaign.newLeads30d}
+                          </span>
+                          {campaign.newLeads30d > 0 && (
+                            <Badge className="h-4 border-blue-100 bg-blue-50 py-0 text-[9px] font-bold text-blue-700 hover:bg-blue-50">
+                              +
+                              {Math.round(
+                                (campaign.newLeads30d /
+                                  (campaign.totalLeads || 1)) *
+                                  100
+                              )}
+                              %
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div
+                          className={`flex items-center gap-1 text-sm font-black ${campaign.growth > 0 ? 'text-emerald-600' : 'text-slate-400'}`}
+                        >
+                          {campaign.growth > 0 ? (
+                            <ArrowUpRight className="h-4 w-4" />
+                          ) : null}
+                          {campaign.growth}%
+                        </div>
+                      </TableCell>
+                      <TableCell className="pr-6 text-right text-xs font-medium text-slate-400">
+                        {formatDate(campaign.lastUpdated)}
+                      </TableCell>
+                    </TableRow>
+                    {/* Variant Breakdown Row */}
+                    {campaign.variants && campaign.variants.length > 0 && (
+                      <TableRow className="bg-slate-50/30 hover:bg-slate-50/50">
+                        <TableCell colSpan={6} className="p-0">
+                          <div className="flex flex-col border-y border-slate-100/50 bg-slate-50/20 px-8 py-3">
+                            <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              <RefreshCw className="h-3 w-3" />
+                              A/B Test Variants
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                              {campaign.variants.map((v) => (
+                                <div
+                                  key={v.id}
+                                  className="rounded-lg border border-slate-200/50 bg-white p-3 shadow-sm"
+                                >
+                                  <div className="mb-1 text-xs font-bold text-slate-700">
+                                    {v.name}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <div className="text-[9px] font-medium text-slate-400 uppercase">Views</div>
+                                      <div className="text-xs font-bold text-slate-900">{v.viewCount}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-[9px] font-medium text-slate-400 uppercase">Leads</div>
+                                      <div className="text-xs font-bold text-slate-900">{v.conversionCount}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-[9px] font-medium text-blue-400 uppercase">CR %</div>
+                                      <div className="text-xs font-bold text-blue-600">{v.conversionRate}%</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
                 ))}
               </TableBody>
             </Table>
