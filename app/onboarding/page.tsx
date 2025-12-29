@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Folder, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Card,
   CardContent,
@@ -15,6 +14,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { FolderSelector } from '@/components/campaigns/folder-selector';
 
 export default function OnboardingPage() {
   const { data: session, status } = useSession();
@@ -58,35 +58,25 @@ export default function OnboardingPage() {
     setError('');
     setIsSubmitting(true);
 
-    // Extract ID from URL if provided
-    let folderId = folderLink.trim();
-    if (folderId.includes('drive.google.com')) {
-        const match = folderId.match(/folders\/([-a-zA-Z0-9_]+)/);
-        if (match && match[1]) {
-            folderId = match[1];
-        }
-    }
+    const folderId = folderLink.trim();
 
     if (!folderId) {
-        setError('Please enter a valid Folder ID or URL');
+        setError('Please select or enter a valid Folder ID');
         setIsSubmitting(false);
         return;
     }
 
+    console.log(`Creating campaign with folder ID: ${folderId}`);
+
     try {
-        // Create campaign
-        // We assume POST /api/campaigns handles the creation. 
-        // We'll generate a basic name derived from the user name or just "My First Campaign" if frontend doesn't ask for it.
-        // Or we could ask for name in Step 2.
-        // For now, let's keep it simple as per plan: just folder ID.
-        
         const res = await fetch('/api/campaigns', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 name: `${session?.user?.name || 'User'}'s Campaign`,
-                slug: `campaign-${Date.now()}`, // Temporary slug
+                slug: `campaign-${Date.now()}`,
                 folderId: folderId,
+                isActive: true,
             })
         });
 
@@ -125,7 +115,7 @@ export default function OnboardingPage() {
             <CardHeader>
                 <CardTitle>Step {step}: Connect Folder</CardTitle>
                 <CardDescription>
-                    Paste the link to the Google Drive folder you want to share.
+                    Select a Google Drive folder from your account or paste a folder link/ID.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -137,13 +127,12 @@ export default function OnboardingPage() {
                     )}
                     
                     <div className="space-y-2">
-                        <Label htmlFor="folder" className="text-base">Google Drive Folder Link</Label>
-                        <Input 
-                            id="folder"
-                            placeholder="https://drive.google.com/drive/folders/..."
+                        <Label htmlFor="folder" className="text-base">Google Drive Folder</Label>
+                        <FolderSelector
                             value={folderLink}
-                            onChange={e => setFolderLink(e.target.value)}
-                            required
+                            onValueChange={setFolderLink}
+                            placeholder="Select or paste your Google Drive folder"
+                            allowManualInput={true}
                         />
                          <p className="text-xs text-muted-foreground">
                             Make sure you have &quot;Editor&quot; access to this folder.

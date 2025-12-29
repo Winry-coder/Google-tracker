@@ -138,48 +138,64 @@ export async function GET(request: Request) {
 
 // POST /api/campaigns - Create new campaign with validation
 export async function POST(request: Request) {
+  console.log(`🚀 Starting campaign creation...`);
   try {
     const body = await request.json();
+    console.log(`📦 Received body:`, body);
 
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
+         console.log(`❌ No session found`);
          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    console.log(`✅ Session valid for user: ${session.user.id}`);
 
     // 1. Zod Validation
+    console.log(`🔍 Starting Zod validation...`);
     const validated = createCampaignSchema.parse(body);
+    console.log(`✅ Zod validation passed:`, validated);
 
     // 2. Check for slug collision
+    console.log(`🔍 Checking slug collision for: ${validated.slug}`);
     const existingSlug = await prisma.campaign.findFirst({
       where: { slug: validated.slug, deletedAt: null },
     });
     if (existingSlug) {
+      console.log(`❌ Slug collision found: ${validated.slug}`);
       return NextResponse.json(
         { error: 'A campaign with this slug already exists.' },
         { status: 400 }
       );
     }
+    console.log(`✅ Slug available: ${validated.slug}`);
 
     // 3. Check for folderId collision (scope to owner?? Maybe not, globally unique folder map is better for sync simplicity?)
-    // Let's keep it global for now to avoid multiple campaigns tracking same folder?
-    // Actually, "where: { folderId: ... }" is global check.
-    const existingFolder = await prisma.campaign.findFirst({
-      where: { folderId: validated.folderId, deletedAt: null },
-    });
-    if (existingFolder) {
-      return NextResponse.json(
-        {
-          error: `This folder is already linked to campaign "${existingFolder.name}".`,
-        },
-        { status: 400 }
-      );
-    }
+    // Let's allow multiple campaigns to track the same folder for now
+    // console.log(`🔍 Checking folder collision for: ${validated.folderId}`);
+    // const existingFolder = await prisma.campaign.findFirst({
+    //   where: { folderId: validated.folderId, deletedAt: null },
+    // });
+    // if (existingFolder) {
+    //   console.log(`❌ Folder collision found: ${validated.folderId} (campaign: ${existingFolder.name})`);
+    //   return NextResponse.json(
+    //     {
+    //       error: `This folder is already linked to campaign "${existingFolder.name}".`,
+    //     },
+    //     { status: 400 }
+    //   );
+    // }
+    // console.log(`✅ Folder available: ${validated.folderId}`);
 
     // 4. Drive Folder Validation (Crucial requirement)
     // Use user-specific validator
+    console.log(`🔍 Starting folder validation for campaign creation...`);
+    console.log(`Validating folder ${validated.folderId} for user ${session.user.id}`);
     const folderValid = await validateDriveFolderForUser(session.user.id, validated.folderId);
     
+    console.log(`📋 Folder validation result:`, folderValid);
+
     if (!folderValid.isValid) {
+      console.log(`❌ Folder validation failed: ${folderValid.error}`);
       if (process.env.NODE_ENV === 'development') {
         // eslint-disable-next-line no-console
         console.error('Folder validation failed in API:', folderValid.error);
@@ -191,8 +207,10 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    console.log(`✅ Folder validation passed: ${folderValid.name}`);
 
     // 5. Create campaign
+    console.log(`🔍 Creating campaign in database...`);
     const { variants, ...campaignData } = validated;
     const campaign = await prisma.campaign.create({
       data: {
@@ -230,6 +248,7 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
+    console.error(`❌ Campaign creation failed:`, error);
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
       console.error('Error creating campaign');

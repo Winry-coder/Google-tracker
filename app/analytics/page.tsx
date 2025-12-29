@@ -31,6 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatDate } from '@/lib/utils/format';
+import { AuthenticatedLayout } from '@/components/layouts/authenticated-layout';
 
 interface OverviewStats {
   totalLeads: number;
@@ -117,60 +118,51 @@ export default function AnalyticsPage() {
   const maxCampaignLeads = Math.max(...campaigns.map((c) => c.totalLeads), 1);
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] pb-12">
-      {/* Header */}
-      <div className="border-b bg-white">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                Analytics Insights
-              </h1>
-              <p className="mt-1 font-medium text-slate-500">
-                Deep dive into your campaign performance and lead growth.
-              </p>
+    <AuthenticatedLayout
+      title="Analytics Insights"
+      description="Deep dive into your campaign performance and lead growth."
+    >
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div></div>
+          <div className="flex items-center gap-3">
+            <div className="flex rounded-lg border bg-slate-100 p-1">
+              {['7', '30', '90'].map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={`rounded-md px-4 py-1.5 text-xs font-semibold transition-all ${
+                    timeRange === range
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {range} Days
+                </button>
+              ))}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex rounded-lg border bg-slate-100 p-1">
-                {['7', '30', '90'].map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setTimeRange(range)}
-                    className={`rounded-md px-4 py-1.5 text-xs font-semibold transition-all ${
-                      timeRange === range
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                  >
-                    {range} Days
-                  </button>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                className="h-9"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => fetchData()}
-                className="h-9 w-9"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
-                />
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              className="h-9"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => fetchData()}
+              className="h-9 w-9"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+              />
+            </Button>
           </div>
         </div>
-      </div>
 
-      <div className="container mx-auto space-y-8 px-4 py-8">
         {/* Stats Row */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -430,7 +422,7 @@ export default function AnalyticsPage() {
           </div>
         </Card>
       </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }
 

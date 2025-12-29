@@ -6,37 +6,21 @@ import {
   Database,
   Download,
   User as UserIcon,
-  Filter,
-  BarChart3,
   CheckSquare,
-  Settings,
   Square,
   Trash2,
   ShieldCheck,
   ShieldAlert,
   ChevronDown,
   Loader2,
-  Menu,
-  LogOut,
   Mail,
   Briefcase,
 } from 'lucide-react';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
 import type { User } from '@/types/user';
+import type { Campaign } from '@/types/campaign';
 import { useUsers } from '@/hooks/use-users';
-import { SyncButton } from '@/components/sync/sync-button';
 import { StatsCards } from '@/components/dashboard/stats-cards';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -60,22 +44,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatDate } from '@/lib/utils/format';
-import { CreateUserDialog } from '@/components/users/create-user-dialog';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { UserDetailSheet } from '@/components/users/user-detail-sheet';
 import { useToast } from '@/hooks/use-toast';
-
-interface Campaign {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  folderId: string;
-  isActive: boolean;
-  totalLeads: number;
-  createdAt: string;
-  updatedAt: string;
-}
+import { formatDate } from '@/lib/utils/format';
+import { AuthenticatedLayout } from '@/components/layouts/authenticated-layout';
 
 export default function DashboardPage(): JSX.Element {
   const [search, setSearch] = useState('');
@@ -177,127 +152,28 @@ export default function DashboardPage(): JSX.Element {
     window.location.href = '/api/users/export';
   };
 
-  const NavButtons = ({ vertical = false }: { vertical?: boolean }) => (
-    <div
-      className={`flex ${vertical ? 'flex-col gap-3' : 'hidden items-center gap-2 lg:flex'}`}
-    >
-      <Button
-        variant="outline"
-        size={vertical ? 'lg' : 'sm'}
-        onClick={() => (window.location.href = '/campaigns')}
-        className={
-          vertical ? 'h-12 w-full justify-start rounded-xl' : 'rounded-lg'
-        }
-      >
-        <Filter className="mr-2 h-4 w-4" />
-        Campaigns
-      </Button>
-      <Button
-        variant="outline"
-        size={vertical ? 'lg' : 'sm'}
-        onClick={() => (window.location.href = '/analytics')}
-        className={
-          vertical ? 'h-12 w-full justify-start rounded-xl' : 'rounded-lg'
-        }
-      >
-        <BarChart3 className="mr-2 h-4 w-4" />
-        Analytics
-      </Button>
-      <Button
-        variant="outline"
-        size={vertical ? 'lg' : 'sm'}
-        onClick={handleExport}
-        className={
-          vertical ? 'h-12 w-full justify-start rounded-xl' : 'rounded-lg'
-        }
-      >
-        <Download className="mr-2 h-4 w-4" />
-        Export CSV
-      </Button>
-      <div className={vertical ? 'w-full' : ''}>
-        <CreateUserDialog campaigns={campaigns} />
-      </div>
-      <div className={vertical ? 'w-full' : ''}>
-        <SyncButton />
-      </div>
-      <Button
-        variant="outline"
-        size={vertical ? 'lg' : 'sm'}
-        onClick={() => (window.location.href = '/settings')}
-        className={
-          vertical ? 'h-12 w-full justify-start rounded-xl' : 'rounded-lg'
-        }
-      >
-        <Settings className="mr-2 h-4 w-4" />
-        Settings
-      </Button>
-      <Button
-        variant="ghost"
-        size={vertical ? 'lg' : 'sm'}
-        onClick={() => {
-          import('next-auth/react').then((mod) => mod.signOut());
-        }}
-        className={`text-red-600 hover:bg-red-50 hover:text-red-700 ${vertical ? 'h-12 w-full justify-start rounded-xl' : 'rounded-lg'}`}
-      >
-        <LogOut className="mr-2 h-4 w-4" />
-        Sign Out
-      </Button>
-    </div>
-  );
+
+
+
+
+
+
+
+
+
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-12">
+    <AuthenticatedLayout
+      title="Drive Sync Dashboard"
+      description="Manage Google Drive folder permissions and lead access"
+    >
       <UserDetailSheet
         userId={viewUserId}
         open={!!viewUserId}
         onOpenChange={(open) => !open && setViewUserId(null)}
       />
 
-      {/* Header */}
-      <div className="sticky top-0 z-40 border-b bg-white">
-        <div className="container mx-auto px-4 py-3 sm:py-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="truncate text-xl font-black tracking-tight sm:text-2xl">
-                Drive Sync Dashboard
-              </h1>
-              <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wide text-gray-400 text-muted-foreground sm:text-xs">
-                Manage Google Drive folder permissions and lead access
-              </p>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-2">
-              <NavButtons />
-              <div className="lg:hidden">
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 rounded-xl border-gray-200 shadow-sm"
-                    >
-                      <Menu className="h-5 w-5" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-[300px] sm:w-[350px]">
-                    <SheetHeader className="pb-6 text-left">
-                      <SheetTitle className="text-2xl font-black">
-                        Menu
-                      </SheetTitle>
-                      <SheetDescription>
-                        Manage your campaigns and settings
-                      </SheetDescription>
-                    </SheetHeader>
-                    <NavButtons vertical />
-                  </SheetContent>
-                </Sheet>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto space-y-6 px-4 py-6 sm:space-y-8 sm:py-8">
+      <div className="space-y-6 sm:space-y-8">
         <StatsCards />
 
         {/* Getting Started guide */}
@@ -432,6 +308,15 @@ export default function DashboardPage(): JSX.Element {
                       filteredUsers.length > 0
                         ? 'Deselect Items'
                         : 'Select All Items'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      className="h-10 rounded-xl px-4 font-bold text-slate-600 hover:bg-slate-50"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export CSV
                     </Button>
                   </div>
                 </div>
@@ -673,57 +558,6 @@ export default function DashboardPage(): JSX.Element {
         </div>
       </div>
 
-      {/* Floating Selection Bar */}
-      {selectedUsers.size > 0 && (
-        <div className="fixed bottom-6 left-4 right-4 z-50 flex items-center justify-between gap-4 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-2xl duration-500 animate-in slide-in-from-bottom-8 md:left-1/2 md:right-auto md:-translate-x-1/2 md:justify-start">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold leading-none">
-              {selectedUsers.size}
-            </div>
-            <div className="text-sm font-bold">Selected</div>
-          </div>
-          <div className="hidden h-4 w-px bg-slate-700 md:block"></div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 px-3 text-white hover:bg-white/10"
-              onClick={toggleAll}
-            >
-              Deselect
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-9 rounded-xl bg-blue-600 hover:bg-blue-700"
-                >
-                  Action <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={() => handleBulkStatusChange('active')}
-                >
-                  Grant Access
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleBulkStatusChange('suspended')}
-                >
-                  Suspend
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-red-600"
-                  onClick={() => handleBulkStatusChange('revoked')}
-                >
-                  Delete Selected
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      )}
-    </div>
+    </AuthenticatedLayout>
   );
 }

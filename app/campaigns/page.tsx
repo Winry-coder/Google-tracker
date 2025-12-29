@@ -40,6 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { AuthenticatedLayout } from '@/components/layouts/authenticated-layout';
 
 interface Campaign {
   id: string;
@@ -168,31 +169,21 @@ export default function CampaignsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-12">
-      <div className="border-b bg-white">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Campaign List
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Manage your Google Drive folders and track specific lead
-                sources.
-              </p>
-            </div>
-            <Button
-              onClick={handleCreate}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Campaign
-            </Button>
-          </div>
+    <AuthenticatedLayout
+      title="Campaign List"
+      description="Manage your Google Drive folders and track specific lead sources."
+    >
+      <div className="space-y-8">
+        <div className="flex items-center justify-end">
+          <Button
+            onClick={handleCreate}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New Campaign
+          </Button>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8">
         <Card className="border-none shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -397,7 +388,7 @@ export default function CampaignsPage() {
         </Card>
 
         {/* Info Section */}
-        <div className="mt-8 flex gap-4 rounded-xl border border-blue-100 bg-blue-50/50 p-6">
+        <div className="flex gap-4 rounded-xl border border-blue-100 bg-blue-50/50 p-6">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100">
             <Info className="h-5 w-5 text-blue-600" />
           </div>
@@ -447,6 +438,6 @@ export default function CampaignsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </AuthenticatedLayout>
   );
 }

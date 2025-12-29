@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { AuthenticatedLayout } from '@/components/layouts/authenticated-layout';
 
 interface DiscordSettingsResponse {
   success?: boolean;
@@ -150,7 +151,10 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 px-4 py-8">
+    <AuthenticatedLayout
+      title="Notification Settings"
+      description="Configure your notification preferences and integrations."
+    >
       <div className="mx-auto max-w-2xl space-y-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
@@ -243,6 +247,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }

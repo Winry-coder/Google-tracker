@@ -1,121 +1,299 @@
-# 🧪 Testing Guide: Access Tracker Pulse
+# 🧪 Testing Guide: Google Drive Access Tracker
 
-This guide provides step-by-step instructions to verify every feature of the Access Tracker Pulse application, including the new **Creator Per-User OAuth** flow.
-
----
-
-## 🛠️ Step 0: Environment Setup
-
-Before testing, ensure your environment is correctly configured.
-
-1.  **Environment Variables**:
-    Ensure your `.env` file includes the new encryption key:
-
-    ```env
-    TOKEN_ENCRYPTION_KEY=your_base64_key_here
-    ```
-
-    _Tip: Generate a key using `openssl rand -base64 32` or an online generator._
-
-2.  **Database**:
-    Run migrations to ensure your schema is up to date:
-
-    ```bash
-    npx prisma migrate dev
-    ```
-
-3.  **Create Admin Account (Optional)**:
-    If you still want to test the admin portal specifically:
-    ```bash
-    npx tsx scripts/create-admin.ts admin@example.com password123 "Test Admin"
-    ```
+This guide provides comprehensive testing procedures for the fully implemented Google Drive Access Tracker application, including all current features and functionality.
 
 ---
 
-## 🔐 1. Authentication & Onboarding (New Flow)
+## 🛠️ Environment Setup
 
-The application now supports individual creators signing in with their own Google accounts.
+### Prerequisites
+1. **Dependencies Installed:**
+   ```bash
+   pnpm install
+   pnpm exec playwright install
+   ```
 
-- **Creator Login**:
-  - Navigate to `/login`.
-  - Click **"Sign in with Google"**.
-  - Authorize the application with a Google account.
-  - **Verify**: You are redirected to `/onboarding` (if first time) or `/campaigns` (if returning).
+2. **Environment Variables:**
+   ```bash
+   cp .env.example .env
+   # Fill in all required variables:
+   # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TURSO_DATABASE_URL, etc.
+   ```
 
-- **Onboarding Flow**:
-  - After signing in for the first time, you should see the **"Connect Folder"** step.
-  - Paste a valid Google Drive folder URL (that the signed-in user has access to).
-  - Click **"Create Campaign"**.
-  - **Verify**: You are redirected to the campaign dashboard, and the campaign is created with your user as the `owner`.
+3. **Database Ready:**
+   ```bash
+   pnpm prisma generate
+   pnpm prisma db push
+   pnpm prisma db seed
+   ```
 
-- **Admin Login (Legacy)**:
-  - use the credentials `admin@example.com` / `password123`.
-  - **Verify**: Access to the global admin view (if authorized).
+4. **Development Server:**
+   ```bash
+   pnpm dev
+   ```
+
+---
+
+## 🔐 1. Authentication & User Management
+
+### **Test 1.1: Google OAuth Login**
+- **Steps:**
+  1. Navigate to `/login`
+  2. Click "Sign in with Google"
+  3. Complete OAuth flow
+  4. Verify redirect to `/onboarding` or `/dashboard`
+- **Expected:** ✅ User session created, tokens encrypted, profile saved
+
+### **Test 1.2: User Onboarding**
+- **Steps:**
+  1. Complete Google login
+  2. Fill campaign creation form
+  3. Submit with valid Drive folder URL
+- **Expected:** ✅ Campaign created, user set as owner, initial sync triggered
+
+### **Test 1.3: Session Persistence**
+- **Steps:**
+  1. Login and navigate between pages
+  2. Refresh browser
+  3. Test logout functionality
+- **Expected:** ✅ Session maintained, secure logout
 
 ---
 
 ## 📁 2. Campaign Management
 
-Campaigns are now scoped to the logged-in user.
+### **Test 2.1: Campaign Creation**
+- **Steps:**
+  1. Navigate to `/campaigns`
+  2. Click "New Campaign"
+  3. Fill form with valid Drive folder URL
+  4. Submit and verify creation
+- **Expected:** ✅ Campaign in database, public link generated
 
-- **Verify Ownership**:
-  - Sign in as **User A**. Create a campaign "User A Campaign".
-  - Sign out and sign in as **User B**.
-  - **Verify**: User B **cannot** see "User A Campaign" in their list.
+### **Test 2.2: Campaign Isolation**
+- **Steps:**
+  1. Create campaign as User A
+  2. Login as User B
+  3. Verify User B cannot see User A's campaigns
+- **Expected:** ✅ User-scoped campaign access
 
-- **Create Additional Campaigns**:
-  - From the dashboard, click **"New Campaign"**.
-  - Enter details and a _different_ Drive Folder ID.
-  - **Verify**: Both campaigns appear in the list.
-
-- **Public Access**:
-  - Navigate to the public link `/access/[slug]`.
-  - **Verify**: The page loads correctly regardless of who is logged in (it's public).
-
----
-
-## 🧪 3. A/B Testing & Variants
-
-- **Add Variants**:
-  - Open a Campaign.
-  - Click **"Add Variant"**.
-  - Configure unique titles/descriptions.
-- **Traffic Splitting**:
-  - Open the public link in multiple private windows.
-  - **Verify**: You see different variants rotated (sticky sessions might keep showing the same one per browser/cookie).
+### **Test 2.3: Public Access Links**
+- **Steps:**
+  1. Copy campaign access link
+  2. Open in incognito window
+  3. Submit lead form
+- **Expected:** ✅ Public access works without authentication
 
 ---
 
-## 📊 4. Lead Tracking & Analytics
+## 👥 3. User Directory & Management
 
-- **Submit a Lead**:
-  - On the public access page, enter a "Test User" email.
-  - Submit the form.
-- **Verify Attribution**:
-  - Go back to the dashboard (as the Campaign Owner).
-  - **Verify**: The "Total Leads" count has incremented.
-  - **Verify**: The new lead appears in the user list, tagged with the correct Campaign and Source.
+### **Test 3.1: User Directory Display**
+- **Steps:**
+  1. Navigate to `/dashboard`
+  2. Verify table loads with user data
+  3. Test responsive design on mobile
+- **Expected:** ✅ Table displays, responsive layout works
+
+### **Test 3.2: Search & Filtering**
+- **Steps:**
+  1. Enter search terms in search box
+  2. Test campaign filter dropdown
+  3. Verify real-time filtering
+- **Expected:** ✅ Search works, filters apply correctly
+
+### **Test 3.3: Bulk User Operations**
+- **Steps:**
+  1. Select multiple users via checkboxes
+  2. Use bulk actions: Grant/Suspend/Delete
+  3. Verify confirmation dialogs
+- **Expected:** ✅ Operations complete, UI updates, database changes
+
+### **Test 3.4: User Detail Sheets**
+- **Steps:**
+  1. Click user row in table
+  2. Verify detail sheet opens
+  3. Test edit capabilities
+- **Expected:** ✅ User info displays, editing works
 
 ---
 
-## 🔄 5. Sync Engine
+## 🔄 4. Sync Engine
 
-The sync now runs using the **Campaign Owner's** credentials, not a global token.
+### **Test 4.1: Manual Sync**
+- **Steps:**
+  1. Click "Sync Now" on dashboard
+  2. Monitor progress indicator
+  3. Check sync status endpoint
+- **Expected:** ✅ Sync completes, users updated, logs created
 
-- **Manual Sync**:
-  - Click **"Sync Now"** on the dashboard.
-  - **Verify**: The system connects to Drive using _your_ specific encrypted tokens.
-  - **Verify**: Changes in your Drive folder (new editors/viewers) are reflected in the user list.
+### **Test 4.2: Sync Status Monitoring**
+- **Steps:**
+  1. Check `/api/sync/status` during sync
+  2. Verify progress indicators
+  3. Review sync logs in database
+- **Expected:** ✅ Real-time status updates
 
 ---
 
-## 🛠 Troubleshooting
+## 📊 5. Analytics & Reporting
 
-- **"Invalid Key Length" Error**:
-  - Check `TOKEN_ENCRYPTION_KEY` in `.env`. It must be a 32-byte key encoded in Base64.
-- **"Folder not found" during onboarding**:
-  - Ensure the Google Account you signed in with actually has "Editor" or "Viewer" access to that specific folder.
-- **Lint/Type Errors**:
-  - Run `pnpm build` or `npx tsc` to verify type safety.
+### **Test 5.1: Analytics Dashboard**
+- **Steps:**
+  1. Navigate to `/analytics`
+  2. Verify charts and metrics load
+  3. Test different time ranges
+- **Expected:** ✅ Data displays, interactions work
 
-_Happy Testing!_ 🚀
+### **Test 5.2: Data Visualization**
+- **Steps:**
+  1. Hover over chart elements
+  2. Test responsive behavior
+  3. Verify data accuracy
+- **Expected:** ✅ Charts interactive, data correct
+
+---
+
+## ⚙️ 6. Settings & Configuration
+
+### **Test 6.1: User Settings**
+- **Steps:**
+  1. Navigate to `/settings`
+  2. Test profile editing
+  3. Configure notifications
+- **Expected:** ✅ Settings save, preferences applied
+
+---
+
+## 🔌 7. API Endpoints Testing
+
+### **Test 7.1: Authentication APIs**
+```bash
+# Session management
+curl -X GET http://localhost:3000/api/auth/session
+curl -X GET http://localhost:3000/api/users/me
+```
+
+### **Test 7.2: CRUD Operations**
+```bash
+# Users
+curl -X GET "http://localhost:3000/api/users?page=1&pageSize=10"
+curl -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"email":"test@example.com"}'
+
+# Campaigns
+curl -X GET http://localhost:3000/api/campaigns
+curl -X POST http://localhost:3000/api/campaigns -H "Content-Type: application/json" -d '{"name":"Test","folderId":"id"}'
+```
+
+### **Test 7.3: Sync & Analytics**
+```bash
+# Sync operations
+curl -X POST http://localhost:3000/api/sync
+curl -X GET http://localhost:3000/api/sync/status
+
+# Analytics
+curl -X GET http://localhost:3000/api/analytics/overview
+curl -X GET "http://localhost:3000/api/analytics/timeline?days=7"
+```
+
+---
+
+## 🧪 8. Automated Testing
+
+### **Unit Tests (Vitest)**
+```bash
+# Run all unit tests
+pnpm test
+
+# With coverage
+pnpm test --coverage
+
+# Watch mode
+pnpm test --watch
+```
+
+### **E2E Tests (Playwright)**
+```bash
+# Run all E2E tests
+pnpm exec playwright test
+
+# UI mode (recommended)
+pnpm exec playwright test --ui
+
+# Specific browser
+pnpm exec playwright test --project=chromium
+
+# Debug mode
+pnpm exec playwright test --debug
+```
+
+---
+
+## 🔧 9. Troubleshooting
+
+### **Common Issues**
+
+- **OAuth Errors:** Check Google Cloud Console configuration
+- **Database Issues:** Verify Turso connection and migrations
+- **Sync Failures:** Ensure user has Drive folder access
+- **API Errors:** Check authentication and permissions
+
+### **Debug Commands**
+```bash
+# Type checking
+npx tsc --noEmit
+
+# Linting
+pnpm lint
+
+# Database inspection
+pnpm prisma studio
+
+# Build verification
+pnpm build
+```
+
+---
+
+## ✅ Testing Checklist
+
+### **Authentication**
+- [ ] Google OAuth login
+- [ ] User onboarding
+- [ ] Session management
+- [ ] Logout functionality
+
+### **Campaign Management**
+- [ ] Campaign creation
+- [ ] Campaign isolation
+- [ ] Public access links
+- [ ] Campaign sync
+
+### **User Management**
+- [ ] User directory display
+- [ ] Search and filtering
+- [ ] Bulk operations
+- [ ] User detail views
+
+### **Analytics**
+- [ ] Dashboard metrics
+- [ ] Chart interactions
+- [ ] Time range selection
+
+### **API Testing**
+- [ ] Authentication endpoints
+- [ ] CRUD operations
+- [ ] Sync functionality
+- [ ] Analytics data
+
+### **Quality Assurance**
+- [ ] TypeScript compilation
+- [ ] ESLint checks
+- [ ] Unit test coverage
+- [ ] E2E test passing
+- [ ] Responsive design
+- [ ] Performance benchmarks
+
+---
+
+_Happy Testing! 🚀 For detailed navigation instructions, see the [Navigation & Testing Guide](./NAVIGATION_TESTING_GUIDE.md)._

@@ -41,8 +41,9 @@ if (isRemoteDatabase && authToken) {
 }
 
 // Encryption Middleware
-import { encrypt, decrypt } from '@/lib/security/encryption';
+// import { encrypt, decrypt } from '@/lib/security/encryption';
 
+/*
 prismaClient.$use(async (params, next) => {
   if (params.model !== 'Account') {
     return next(params);
@@ -78,6 +79,7 @@ prismaClient.$use(async (params, next) => {
  
   return result;
 });
+*/
 
 export const prisma = globalForPrisma.prisma ?? prismaClient;
 

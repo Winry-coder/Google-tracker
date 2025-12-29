@@ -30,7 +30,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, FolderOpen, Wand2, Plus, Trash2, Layout } from 'lucide-react';
+import { Loader2, Wand2, Plus, Trash2, Layout } from 'lucide-react';
+import { FolderSelector } from './folder-selector';
 import { useToast } from '@/hooks/use-toast';
 import {
   Accordion,
@@ -148,7 +149,7 @@ export function CampaignForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {campaign ? 'Edit Campaign' : 'Create New Campaign'}
@@ -228,16 +229,14 @@ export function CampaignForm({
               name="folderId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <FolderOpen className="h-4 w-4 text-blue-600" />
-                    Google Drive Folder ID
-                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter the Drive Folder ID" {...field} />
+                    <FolderSelector
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Select a Google Drive folder"
+                      allowManualInput={true}
+                    />
                   </FormControl>
-                  <FormDescription>
-                    Right-click folder → Share → Link (ID is at the end).
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

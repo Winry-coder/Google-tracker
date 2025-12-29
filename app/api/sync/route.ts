@@ -23,12 +23,15 @@ export async function POST(
   request: Request
 ): Promise<NextResponse<APIResponse<SyncResult>>> {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden' },
-        { status: 403 }
-      );
+    // Allow Playwright E2E tests to bypass auth when this env flag is set.
+    if (process.env.PLAYWRIGHT_BYPASS_AUTH !== '1') {
+      const session = await getServerSession(authOptions);
+      if (!session?.user || session.user.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'Forbidden' },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json();

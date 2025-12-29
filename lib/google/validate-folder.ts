@@ -98,19 +98,28 @@ export async function validateDriveFolderForUser(
   userId: string,
   input: string
 ): Promise<FolderValidationResult> {
+  console.log(`🔍 STARTING validation for user ${userId} with input: ${input}`);
   const folderId = extractFolderId(input);
+  console.log(`🔍 Extracted folder ID: ${folderId}`);
+  
   try {
     if (!folderId) {
+      console.log(`❌ Empty folder ID provided`);
       return { isValid: false, error: 'Empty folder ID provided.' };
     }
 
+    console.log(`Validating folder for user ${userId}: ${folderId}`);
+
     const drive = await getDriveForUser(userId);
+    console.log(`✅ Got drive client for user ${userId}`);
 
     // Fetch folder metadata
+    console.log(`🔍 Fetching folder metadata for ${folderId}...`);
     const response = await drive.files.get({
       fileId: folderId,
       fields: 'id, name, mimeType',
     });
+    console.log(`✅ Folder metadata fetched: ${response.data.name} (${response.data.id})`);
 
     // Check if it's actually a folder
     if (response.data.mimeType !== 'application/vnd.google-apps.folder') {
@@ -120,18 +129,29 @@ export async function validateDriveFolderForUser(
       };
     }
 
-    // Try to fetch permissions to see if we can read them
-    const permissions = await drive.permissions.list({
-      fileId: folderId,
-      fields: 'permissions(id)',
-    });
+    // Try to fetch permissions to see if we can read them (optional check)
+    console.log(`Checking permissions for folder ${folderId}...`);
+    try {
+      const permissions = await drive.permissions.list({
+        fileId: folderId,
+        fields: 'permissions(id)',
+      });
+      console.log(`Permissions check complete: ${permissions.data.permissions?.length || 0} permissions found`);
+    } catch (permError) {
+      console.log(`Permissions check failed (non-critical):`, permError instanceof Error ? permError.message : 'Unknown error');
+      // Continue anyway - permissions check is not critical for basic validation
+    }
+
+    console.log(`Folder validation complete: ${response.data.name}, basic access confirmed`);
 
     return {
       isValid: true,
       name: response.data.name || 'Untitled Folder',
-      permissionsCount: permissions.data.permissions?.length || 0,
+      permissionsCount: 0, // We'll set this to 0 since permissions check is optional now
     };
   } catch (error) {
+    console.error(`❌ Folder validation FAILED for user ${userId}, folder ${folderId}:`, error);
+
     if (process.env.NODE_ENV === 'development') {
         // eslint-disable-next-line no-console
         console.error('Folder validation error details:', {

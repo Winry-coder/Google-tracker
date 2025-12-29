@@ -20,15 +20,17 @@ async function main() {
   const sqlPath = path.join(process.cwd(), 'migration.sql');
   let sql = '';
   try {
-    // Try reading as utf16le because PowerShell redirection often creates it
-    sql = fs.readFileSync(sqlPath, 'utf16le');
-    if (!sql || sql.trim().length === 0) {
-      // Fallback to utf8
-      sql = fs.readFileSync(sqlPath, 'utf8');
-    }
-    // Remove BOM
+    // Try reading as utf8 first
+    sql = fs.readFileSync(sqlPath, 'utf8');
+    // Remove BOM if present
     if (sql.charCodeAt(0) === 0xfeff) {
       sql = sql.slice(1);
+    }
+    
+    // If it looks like garbled UTF-16 (lots of high characters), try UTF-16LE
+    // Or simpler: if it contains null bytes, it might be UTF-16
+    if (sql.includes('\0')) {
+      sql = fs.readFileSync(sqlPath, 'utf16le');
     }
   } catch (e) {
     console.error('Could not read migration.sql', e);
