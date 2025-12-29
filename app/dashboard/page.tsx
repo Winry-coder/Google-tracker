@@ -148,6 +148,37 @@ export default function DashboardPage(): JSX.Element {
     }
   };
 
+  const handleSync = async (dryRun: boolean = false) => {
+    try {
+      const response = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaignId: selectedCampaign !== 'all' && selectedCampaign !== 'none' ? selectedCampaign : undefined,
+          dryRun,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: dryRun ? 'Dry Run Complete' : 'Sync Complete',
+          description: result.message || (dryRun ? 'Simulation finished successfully.' : 'Campaign data updated.'),
+        });
+        if (!dryRun) refetch();
+      } else {
+        throw new Error(result.error || 'Sync failed');
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Sync Failed',
+        description: error instanceof Error ? error.message : 'Unknown error occurred.',
+      });
+    }
+  };
+
   const handleExport = () => {
     window.location.href = '/api/users/export';
   };
@@ -176,38 +207,7 @@ export default function DashboardPage(): JSX.Element {
       <div className="space-y-6 sm:space-y-8">
         <StatsCards />
 
-        {/* Getting Started guide */}
-        <Card className="overflow-hidden rounded-2xl border-none bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle>Getting Started</CardTitle>
-            <CardDescription>
-              Launch your campaign in 3 simple steps.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 text-sm text-slate-600 md:grid-cols-3">
-            <div>
-              <h3 className="mb-1 font-semibold">
-                1. Sign in with Google
-              </h3>
-              <p>
-                Connect your Google account to enable secure access to your Drive folders.
-              </p>
-            </div>
-            <div>
-              <h3 className="mb-1 font-semibold">2. Connect a Folder</h3>
-              <p>
-                Select the Google Drive folder you want to track leads for.
-              </p>
-            </div>
-            <div>
-              <h3 className="mb-1 font-semibold">3. Share & Track</h3>
-              <p>
-                Share your unique access link and watch leads roll in automatically.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
+        {/* Boss Level Improvement: Campaign Activity Tab / History */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <Card className="h-full overflow-hidden rounded-2xl border-none shadow-sm">
@@ -222,8 +222,28 @@ export default function DashboardPage(): JSX.Element {
                         {filteredUsers.length} users in current view
                       </CardDescription>
                     </div>
-                    {selectedUsers.size > 0 && (
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      {/* Sync Buttons */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSync(false)}
+                        className="h-8 rounded-lg border-blue-200 text-blue-600 hover:bg-blue-50"
+                      >
+                        <Database className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                        Sync
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSync(true)}
+                        className="h-8 rounded-lg text-slate-500 hover:bg-slate-100"
+                        title="Simulate sync without making changes"
+                      >
+                        Dry Run
+                      </Button>
+
+                      {selectedUsers.size > 0 && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -271,8 +291,8 @@ export default function DashboardPage(): JSX.Element {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:items-center">
@@ -290,11 +310,11 @@ export default function DashboardPage(): JSX.Element {
                       onChange={(e) => setSelectedCampaign(e.target.value)}
                       className="h-10 rounded-xl border border-gray-100 bg-gray-50/50 px-3 py-1 text-sm shadow-sm transition-all focus:bg-white focus:outline-none"
                     >
-                      <option value="all">All Campaigns</option>
+                      <option value="all">Global Activity</option>
                       <option value="none">Manual / Untagged</option>
                       {campaigns.map((campaign: Campaign) => (
                         <option key={campaign.id} value={campaign.id}>
-                          {campaign.name}
+                          {campaign.name} {campaign.status === 'needs_reauth' ? '(⚠️ Re-auth required)' : ''}
                         </option>
                       ))}
                     </select>
@@ -553,7 +573,9 @@ export default function DashboardPage(): JSX.Element {
             </Card>
           </div>
           <div className="lg:col-span-1">
-            <ActivityFeed />
+            <ActivityFeed 
+              campaignId={selectedCampaign !== 'all' && selectedCampaign !== 'none' ? selectedCampaign : undefined} 
+            />
           </div>
         </div>
       </div>

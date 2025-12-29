@@ -113,11 +113,11 @@ export async function validateDriveFolderForUser(
     const drive = await getDriveForUser(userId);
     console.log(`✅ Got drive client for user ${userId}`);
 
-    // Fetch folder metadata
-    console.log(`🔍 Fetching folder metadata for ${folderId}...`);
+    // Fetch folder metadata and capabilities
+    console.log(`🔍 Fetching folder metadata and capabilities for ${folderId}...`);
     const response = await drive.files.get({
       fileId: folderId,
-      fields: 'id, name, mimeType',
+      fields: 'id, name, mimeType, capabilities',
     });
     console.log(`✅ Folder metadata fetched: ${response.data.name} (${response.data.id})`);
 
@@ -127,6 +127,17 @@ export async function validateDriveFolderForUser(
         isValid: false,
         error: 'The provided ID is for a file, not a folder.',
       };
+    }
+
+    // Boss Level Improvement: Folder Ownership/Permissions Verification
+    const capabilities = response.data.capabilities as Record<string, boolean | undefined | null>;
+    if (capabilities) {
+      if (!capabilities.canAddChildren || !capabilities.canManagePermissions) {
+        return {
+          isValid: false,
+          error: 'Insufficient permissions. You must be an Owner or Editor of this folder to manage it.',
+        };
+      }
     }
 
     // Try to fetch permissions to see if we can read them (optional check)

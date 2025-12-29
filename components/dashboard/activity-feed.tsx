@@ -26,13 +26,16 @@ interface Activity {
   };
 }
 
-export function ActivityFeed() {
+export function ActivityFeed({ campaignId }: { campaignId?: string }) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchActivity = async () => {
     try {
-      const response = await fetch('/api/activity');
+      const url = campaignId 
+        ? `/api/activity?campaignId=${campaignId}` 
+        : '/api/activity';
+      const response = await fetch(url);
       const data = await response.json();
       if (data.success) {
         setActivities(data.data);
@@ -49,7 +52,7 @@ export function ActivityFeed() {
     // Poll every 30 seconds for "live" feel
     const interval = setInterval(fetchActivity, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [campaignId]);
 
   const getIcon = (type: string) => {
     switch (type) {

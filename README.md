@@ -30,11 +30,14 @@ A production-ready Next.js application that automatically synchronizes Google Dr
 #### **🔄 Sync Engine**
 - **4-Stage Pipeline**: FETCH → MAP → RECONCILE → PERSIST
 - **Real-time Monitoring**: Live sync status and progress tracking
-- **Error Handling**: Comprehensive error recovery and logging
+- **Self-Healing Auth**: Automated Google Refresh Token health checks
+- **Circuit Breaker**: Graceful API degradation with "Queue Mode" for high reliability
+- **Retry Worker**: Background processing for queued access grants
 - **Audit Trails**: Complete sync history and user activity logs
-- **Rate Limiting**: Google API quota management
+- **Rate Limiting**: Multi-tier quota management (IP and Campaign-based)
 
 #### **📊 Analytics & Reporting**
+- **Conversion Optimization**: A/B testing with "Winning Variant" highlighting
 - **Campaign Performance**: Lead attribution and conversion tracking
 - **Timeline Analytics**: 7/30/90-day performance views
 - **User Engagement**: Activity metrics and engagement statistics
@@ -138,6 +141,11 @@ pnpm exec playwright install
    # NextAuth
    NEXTAUTH_SECRET=your_nextauth_secret
    NEXTAUTH_URL=http://localhost:3000
+
+   # Phase 4 Marketing & Reliability
+   RESEND_API_KEY=your_resend_api_key
+   CRON_SECRET=your_cron_secret
+   NEXT_PUBLIC_API_URL=http://localhost:3000
    ```
 
 2. **Google OAuth Setup:**

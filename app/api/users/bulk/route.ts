@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
-import { revokePermission } from '@/lib/google/drive';
+import { revokePermissionForUser } from '@/lib/google/drive';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
@@ -31,7 +31,14 @@ export async function POST(request: Request) {
     // 1. Fetch users with their campaign info to get folderId and permissionId
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
-      include: { campaign: true },
+      include: {
+        campaign: {
+          select: {
+            folderId: true,
+            ownerId: true,
+          },
+        },
+      },
     });
 
     if (users.length === 0) {
@@ -48,17 +55,20 @@ export async function POST(request: Request) {
         (status === 'suspended' || status === 'revoked'));
 
     interface BulkUser {
+      id: string;
       email: string;
+      status: string;
       drivePermissionId: string | null;
-      campaign: { folderId: string } | null;
+      campaign: { folderId: string; ownerId: string | null } | null;
     }
 
     if (needsRevocation) {
       await Promise.allSettled(
         (users as unknown as BulkUser[]).map(async (user: BulkUser) => {
-          if (user.drivePermissionId && user.campaign?.folderId) {
+          if (user.drivePermissionId && user.campaign?.folderId && user.campaign?.ownerId) {
             try {
-              await revokePermission(
+              await revokePermissionForUser(
+                user.campaign.ownerId,
                 user.campaign.folderId,
                 user.drivePermissionId
               );
@@ -77,14 +87,14 @@ export async function POST(request: Request) {
     // Process Google Drive Re-granting if activating
     const isActivating = action === 'update_status' && status === 'active';
     if (isActivating) {
-      const { grantPermission } = await import('@/lib/google/drive');
+      const { grantPermissionForUser } = await import('@/lib/google/drive');
       await Promise.allSettled(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        users.map(async (user: any) => {
+        (users as unknown as BulkUser[]).map(async (user: BulkUser) => {
           // If they previously had access but are now being re-activated
-          if (user.campaign?.folderId && user.status !== 'active') {
+          if (user.campaign?.folderId && user.campaign?.ownerId && user.status !== 'active') {
             try {
-              const result = await grantPermission(
+              const result = await grantPermissionForUser(
+                user.campaign.ownerId,
                 user.campaign.folderId,
                 user.email
               );
@@ -145,8 +155,13 @@ export async function POST(request: Request) {
     }
 
     if (action === 'delete') {
-      await prisma.user.deleteMany({
+      await prisma.user.updateMany({
         where: { id: { in: userIds } },
+        data: {
+          deletedAt: new Date(),
+          hasAccess: false,
+          status: 'revoked',
+        },
       });
 
       // Log the bulk action
@@ -161,7 +176,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: `Successfully deleted ${userIds.length} users and revoked Drive access`,
+        message: `Successfully soft-deleted ${userIds.length} users and revoked Drive access`,
       });
     }
 

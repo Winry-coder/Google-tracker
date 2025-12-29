@@ -3,10 +3,21 @@ import { prisma } from '@/lib/prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const campaignId = searchParams.get('campaignId');
+
+    const where: Record<string, unknown> = {};
+    if (campaignId) {
+      where.user = {
+        campaignId: campaignId,
+      };
+    }
+
     const activities = await prisma.auditLog.findMany({
-      take: 10,
+      where,
+      take: 20,
       orderBy: { createdAt: 'desc' },
       include: {
         user: {

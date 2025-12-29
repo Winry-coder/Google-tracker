@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma/client';
-import { grantPermission } from '@/lib/google/drive';
+import { grantPermissionForUser } from '@/lib/google/drive';
 import { normalizeEmail } from '@/lib/utils/format';
 import { processLeadAutomation } from '@/lib/automation/process-lead';
 import { rateLimit } from '@/lib/security/rate-limit';
@@ -21,20 +21,6 @@ const grantAccessSchema = z.object({
  */
 export async function POST(request: Request) {
   try {
-    // 0. Rate Limiting (Phase 4 Security Refinement)
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
-    const limit = await rateLimit(ip);
-
-    if (limit.isLimited) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Too many requests. Please try again in a minute.',
-        },
-        { status: 429 }
-      );
-    }
-
     const body = await request.json();
     const { email, name, campaignSlug, variantId } =
       grantAccessSchema.parse(body);
@@ -52,6 +38,22 @@ export async function POST(request: Request) {
       );
     }
 
+    // 0. Rate Limiting (Phase 4 Security Refinement)
+    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const limit = await rateLimit(ip, campaign.id);
+
+    if (limit.isLimited) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: limit.reason === 'campaign_limit' 
+            ? 'This campaign is receiving too much traffic. Please try again later.'
+            : 'Too many requests. Please try again in a minute.',
+        },
+        { status: 429 }
+      );
+    }
+
     if (!campaign.isActive) {
       return NextResponse.json(
         { success: false, error: 'This campaign is currently inactive.' },
@@ -64,59 +66,38 @@ export async function POST(request: Request) {
       where: {
         email: normalizedEmail,
         campaignId: campaign.id,
+        status: 'active',
         hasAccess: true,
       },
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'You already have access to this resource',
+      return NextResponse.json({
+        success: true,
+        message: `Success! You already have access to "${campaign.name}".`,
+        data: {
+          email: existingUser.email,
+          campaign: campaign.name,
         },
-        { status: 400 }
-      );
+      });
     }
 
-    // 3. Grant Google Drive Permission
-    let drivePermissionId: string | undefined;
-    try {
-      const result = await grantPermission(campaign.folderId, email);
-      drivePermissionId = result.id;
-    } catch (driveError) {
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.error('Google Drive Grant Error:', driveError);
-      }
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            'Failed to grant folder access. Please ensure the folder is shared with our service account.',
-        },
-        { status: 500 }
-      );
-    }
-
-    // 4. Create or update user in database
+    // 3. Update Database First (Fast Lead Capture)
     const user = await prisma.user.upsert({
       where: { email: normalizedEmail },
       create: {
         email: normalizedEmail,
         name: name || null,
-        hasAccess: true,
+        hasAccess: false, // Will be set to true after permission granted
         role: 'viewer',
         source: 'access_request',
         status: 'active',
         googleEmail: email,
-        googleId: drivePermissionId, // Store permission ID as google ID for now
-        drivePermissionId: drivePermissionId,
         campaignId: campaign.id,
         variantId: variantId || null,
         lastSyncedAt: new Date(),
       },
       update: {
-        hasAccess: true,
         status: 'active',
         campaignId: campaign.id,
         variantId: variantId || undefined,
@@ -124,13 +105,13 @@ export async function POST(request: Request) {
       },
     });
 
-    // 5. Update campaign stats
+    // 4. Update campaign stats
     await prisma.campaign.update({
       where: { id: campaign.id },
       data: { totalLeads: { increment: 1 } },
     });
 
-    // 5.1 Update variant stats for A/B testing
+    // 4.1 Update variant stats for A/B testing
     if (variantId) {
       await prisma.variant.update({
         where: { id: variantId },
@@ -138,28 +119,109 @@ export async function POST(request: Request) {
       });
     }
 
-    // 6. Create audit log
-    await prisma.auditLog.create({
-      data: {
-        eventType: 'access.granted',
-        eventSource: 'access_request',
-        newValue: JSON.stringify({ email, campaign: campaign.name }),
-        performedBy: 'system',
-        userId: user.id,
-      },
-    });
+    // 5. Trigger Background Permission Granting and Automation
+    (async () => {
+      try {
+        // Use the campaign owner's identity to grant permission (multi-tenant/SaaS ready)
+        if (!campaign.ownerId) {
+          throw new Error('Campaign has no owner assigned. Cannot grant access.');
+        }
 
-    // 7. Phase 4: Trigger Automation (Enrichment, Email, Webhooks, Notifications)
-    processLeadAutomation(user, campaign.id).catch((err) => {
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.error('Lead automation failed:', err);
+        const result = await grantPermissionForUser(campaign.ownerId, campaign.folderId, email);
+        const drivePermissionId = result.id;
+
+        // Update user with permission ID and set hasAccess to true
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            hasAccess: true,
+            googleId: drivePermissionId,
+            drivePermissionId: drivePermissionId,
+            status: 'active',
+          },
+        });
+
+        // Update campaign health if it was previously in error
+        await prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { status: 'healthy', lastError: null }
+        });
+
+        // Create audit log
+        await prisma.auditLog.create({
+          data: {
+            eventType: 'access.granted',
+            eventSource: 'access_request',
+            newValue: JSON.stringify({ email, campaign: campaign.name }),
+            performedBy: 'system',
+            userId: user.id,
+          },
+        });
+
+        // Trigger Automation (Enrichment, Email, Webhooks, Notifications)
+        await processLeadAutomation(user, campaign.id);
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
+          console.error('Background access grant failed:', err);
+        }
+
+        const error = err as { code?: number; message?: string };
+        
+        // Monitoring: Catch AuthError and mark campaign as needs_reauth
+        if (error.code === 401 || error.message?.includes('invalid_grant')) {
+          await prisma.campaign.update({
+            where: { id: campaign.id },
+            data: { status: 'needs_reauth', lastError: error.message }
+          });
+        }
+
+        // GRACEFUL DEGRADATION: If it's a "Queue Mode" error or API failure, mark as queued
+        const isQueueMode = error.message?.includes('Queue Mode');
+        const isApiFailure = error.code === 500 || error.code === 429 || error.message?.includes('Fetch failed');
+
+        if (isQueueMode || isApiFailure) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { 
+              status: 'active',
+              hasAccess: false,
+              // We'll use a special flag or just keep hasAccess false for retry worker
+            }
+          });
+
+          await prisma.auditLog.create({
+            data: {
+              eventType: 'access.queued',
+              eventSource: 'access_request',
+              newValue: JSON.stringify({ email, campaign: campaign.name, reason: error.message }),
+              performedBy: 'system',
+              userId: user.id,
+            },
+          });
+        } else {
+          // Log failure in audit log
+          await prisma.auditLog.create({
+            data: {
+              eventType: 'access.grant_failed',
+              eventSource: 'access_request',
+              newValue: JSON.stringify({ email, campaign: campaign.name, error: err instanceof Error ? err.message : 'Unknown error' }),
+              performedBy: 'system',
+              userId: user.id,
+            },
+          });
+        }
       }
-    });
+    })();
+
+    const queueMessage = "Success! We're processing your access, you'll receive an email shortly.";
+    const instantMessage = `Success! We're granting you access to "${campaign.name}". Check your inbox in a moment.`;
+
+    const isQueued = user.status === 'active' && !user.hasAccess;
 
     return NextResponse.json({
       success: true,
-      message: `Success! Access to "${campaign.name}" has been granted. Check your inbox.`,
+      message: isQueued ? queueMessage : instantMessage,
       data: {
         email: user.email,
         campaign: campaign.name,

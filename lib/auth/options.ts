@@ -11,12 +11,14 @@ declare module 'next-auth' {
     user: {
       id: string;
       role: string;
+      status: string;
     } & DefaultSession['user'];
   }
 
   interface User {
     role: string;
     id: string;
+    status: string;
   }
 }
 
@@ -24,6 +26,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role: string;
+    status: string;
   }
 }
 
@@ -77,6 +80,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          status: user.status,
         };
       },
     }),
@@ -88,7 +92,7 @@ export const authOptions: NextAuthOptions = {
           access_type: 'offline',
           prompt: 'consent',
           scope: [
-            'https://www.googleapis.com/auth/drive',
+            'https://www.googleapis.com/auth/drive.file',
             'https://www.googleapis.com/auth/drive.metadata.readonly',
             'https://www.googleapis.com/auth/drive.readonly',
             'openid',
@@ -101,16 +105,44 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }): Promise<JWT> {
+      // 1. Initial sign in
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        token.status = user.status;
+        return token;
       }
+
+      // 2. Subsequent sessions: Refresh role from database if not cached
+      // Using a simple memory cache to avoid hitting DB on every single request
+      // In production, use Redis or similar.
+      const now = Math.floor(Date.now() / 1000);
+      const CACHE_TTL = 60; // 60 seconds
+
+      if (!token.lastRoleCheck || now - (token.lastRoleCheck as number) > CACHE_TTL) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { role: true, status: true },
+          });
+
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.status = dbUser.status; // Store status in token for middleware check
+          }
+          token.lastRoleCheck = now;
+        } catch (error) {
+          console.error('JWT Role Refresh Error:', error);
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.role = token.role;
         session.user.id = token.id;
+        session.user.status = token.status;
       }
       return session;
     },

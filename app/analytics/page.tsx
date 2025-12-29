@@ -437,10 +437,21 @@ export default function AnalyticsPage() {
                               {campaign.variants.map((v) => (
                                 <div
                                   key={v.id}
-                                  className="rounded-lg border border-slate-200/50 bg-white p-3 shadow-sm"
+                                  className={`rounded-lg border bg-white p-3 shadow-sm ${
+                                    v.conversionRate === Math.max(...(campaign.variants || []).map(varnt => varnt.conversionRate)) && v.conversionRate > 0
+                                      ? 'border-blue-500 ring-1 ring-blue-500/20'
+                                      : 'border-slate-200/50'
+                                  }`}
                                 >
-                                  <div className="mb-1 text-xs font-bold text-slate-700">
-                                    {v.name}
+                                  <div className="mb-1 flex items-center justify-between">
+                                    <div className="text-xs font-bold text-slate-700">
+                                      {v.name}
+                                    </div>
+                                    {v.conversionRate === Math.max(...(campaign.variants || []).map(varnt => varnt.conversionRate)) && v.conversionRate > 0 && (
+                                      <Badge className="h-4 bg-blue-600 px-1.5 text-[8px] font-black uppercase tracking-tighter text-white">
+                                        Winner
+                                      </Badge>
+                                    )}
                                   </div>
                                   <div className="grid grid-cols-3 gap-2">
                                     <div>

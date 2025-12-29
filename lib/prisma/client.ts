@@ -35,6 +35,8 @@ if (isRemoteDatabase && authToken) {
   });
 } else {
   // Use standard Prisma client for local SQLite
+  // NOTE: For Edge compatibility with local SQLite, you would need another adapter, 
+  // but Turso is already optimized for this.
   prismaClient = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });

@@ -11,6 +11,11 @@ export default withAuth(
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
+    // 10/10 Security Fix: Block suspended users instantly
+    if (token?.status === 'suspended') {
+      return NextResponse.redirect(new URL('/login?error=account_suspended', req.url));
+    }
+
     return NextResponse.next();
   },
   {

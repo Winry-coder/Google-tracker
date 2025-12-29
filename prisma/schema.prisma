@@ -58,6 +58,7 @@ model User {
   updatedAt       DateTime  @updatedAt
   lastSyncedAt    DateTime? 
   revokedAt       DateTime?
+  deletedAt       DateTime? // Soft delete support
 
   // Relations
   auditLogs       AuditLog[]
@@ -68,6 +69,8 @@ model User {
   @@index([status])
   @@index([source])
   @@index([campaignId])
+  @@index([campaignId, status])
+  @@index([deletedAt])
   @@map("users")
 }
 
@@ -112,7 +115,15 @@ model Campaign {
   description String?
   folderId    String   // Google Drive folder ID
   isActive    Boolean  @default(true)
-
+  isKillSwitchEnabled Boolean @default(false) // Global Kill Switch per campaign
+  status      String   @default("healthy") // healthy | needs_reauth | error
+  lastError   String?  // Storage for silent failure logs
+  
+  // Smart Sync (Webhooks)
+  watchChannelId  String?  // Google Drive Watch Channel ID
+  watchResourceId String?  // Google Drive Watch Resource ID
+  watchExpiration DateTime? // Expiration of the watch channel
+  
   // NEW
   ownerId     String?  @map("owner_id")
   owner       User?    @relation("CampaignOwner", fields: [ownerId], references: [id])

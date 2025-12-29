@@ -35,7 +35,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { campaignId } = triggerSyncSchema.parse(body);
+    const { campaignId, dryRun } = triggerSyncSchema.parse(body);
 
     // Helper to run sync for a single campaign and update its stats
     const syncCampaign = async (id: string) => {
@@ -51,7 +51,21 @@ export async function POST(
         throw new Error('Campaign is not active');
       }
 
-      logger.info('Starting manual campaign sync', {
+      // Improvement 3: Guard clause for missing owner
+      if (!campaign.ownerId) {
+        if (!dryRun) {
+          await prisma.campaign.update({
+            where: { id: campaign.id },
+            data: {
+              status: 'error',
+              lastError: 'Missing Owner Credentials: No owner assigned to this campaign.',
+            },
+          });
+        }
+        throw new Error('Missing Owner Credentials');
+      }
+
+      logger.info(dryRun ? 'Starting dry-run campaign sync' : 'Starting manual campaign sync', {
         campaignId: campaign.id,
         folderId: campaign.folderId,
       });
@@ -59,17 +73,23 @@ export async function POST(
       const result = await runDriveSync(
         campaign.folderId,
         campaign.id,
-        campaign.ownerId || undefined
+        campaign.ownerId,
+        dryRun
       );
 
-      await prisma.campaign.update({
-        where: { id: campaign.id },
-        data: {
-          totalLeads: {
-            increment: result.created.length,
+      if (!dryRun) {
+        // Improvement 1: Fix race condition by using count() instead of increment
+        const actualLeadCount = await prisma.user.count({
+          where: { campaignId: campaign.id, deletedAt: null },
+        });
+
+        await prisma.campaign.update({
+          where: { id: campaign.id },
+          data: {
+            totalLeads: actualLeadCount,
           },
-        },
-      });
+        });
+      }
 
       return { campaign, result };
     };
@@ -123,10 +143,14 @@ export async function POST(
       errors: [],
     };
 
-    for (const campaign of campaigns) {
-      try {
-        const { result } = await syncCampaign(campaign.id);
+    // Improvement 5: Parallel sync execution using Promise.allSettled
+    const results = await Promise.allSettled(
+      campaigns.map((c) => syncCampaign(c.id))
+    );
 
+    results.forEach((res, index) => {
+      if (res.status === 'fulfilled') {
+        const { result } = res.value;
         aggregated.created.push(...result.created);
         aggregated.updated.push(...result.updated);
         aggregated.revoked.push(...result.revoked);
@@ -134,15 +158,22 @@ export async function POST(
         if (result.errors && result.errors.length > 0) {
           aggregated.errors?.push(...result.errors);
         }
-      } catch (error) {
-        logger.error('Manual sync failed for campaign', error as Error);
+      } else {
+        const campaign = campaigns[index];
+        logger.error(
+          'Manual sync failed for campaign',
+          res.reason instanceof Error ? res.reason : new Error(String(res.reason)),
+          { campaignId: campaign.id }
+        );
         aggregated.success = false;
         aggregated.errors?.push({
           message:
-            error instanceof Error ? error.message : 'Unknown campaign error',
+            res.reason instanceof Error
+              ? `${campaign.name}: ${res.reason.message}`
+              : `${campaign.name}: Unknown campaign error`,
         });
       }
-    }
+    });
 
     logger.info('Manual multi-campaign sync completed', {
       campaignsSynced: campaigns.length,

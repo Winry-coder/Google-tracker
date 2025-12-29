@@ -86,7 +86,6 @@ export async function getUserOAuthClient(userId: string): Promise<Auth.OAuth2Cli
     throw new GoogleAPIError('Google account not connected for this user');
   }
 
-  // Tokens are automatically decrypted by the Prisma middleware
   const client = createOAuthClient();
   client.setCredentials({
     access_token: account.access_token,
@@ -94,7 +93,62 @@ export async function getUserOAuthClient(userId: string): Promise<Auth.OAuth2Cli
     expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
   });
 
+  // Proactive token refresh
+  const isExpired = account.expires_at ? (account.expires_at * 1000) < Date.now() + 300000 : true; // 5 mins buffer
+  
+  if (isExpired && account.refresh_token) {
+    try {
+      const { credentials } = await client.refreshAccessToken();
+      
+      // Update tokens in database
+      await prisma.account.update({
+        where: { id: account.id },
+        data: {
+          access_token: credentials.access_token,
+          expires_at: credentials.expiry_date ? Math.floor(credentials.expiry_date / 1000) : null,
+          refresh_token: credentials.refresh_token || account.refresh_token,
+        },
+      });
+      
+      client.setCredentials(credentials);
+    } catch (refreshError) {
+       throw new GoogleAPIError(
+        'User OAuth token expired and refresh failed',
+        401,
+        refreshError as Error
+      );
+    }
+  }
+
   return client;
+}
+
+/**
+ * Checks if a user's Google Refresh Token is still valid
+ * @returns boolean indicating if the token is healthy
+ */
+export async function checkTokenHealth(userId: string): Promise<{ healthy: boolean; error?: string }> {
+  try {
+    const account = await prisma.account.findFirst({
+      where: { userId, provider: 'google' },
+    });
+
+    if (!account || !account.refresh_token) {
+      return { healthy: false, error: 'No refresh token found' };
+    }
+
+    const client = createOAuthClient();
+    client.setCredentials({
+      refresh_token: account.refresh_token,
+    });
+
+    // Attempt to get a new access token using the refresh token
+    await client.getAccessToken();
+    return { healthy: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown auth error';
+    return { healthy: false, error: message };
+  }
 }
 
 /**

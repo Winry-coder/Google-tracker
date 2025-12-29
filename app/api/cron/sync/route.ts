@@ -35,65 +35,87 @@ export async function GET(request: Request) {
       });
     }
 
-    // Sync each campaign
-    const results = [];
-    for (const campaign of campaigns) {
-      try {
-        // Enforce per-owner context: campaigns without an owner are skipped
-        if (!campaign.ownerId) {
-          logger.warn('Skipping campaign without ownerId during cron sync', {
+    // Sync each campaign in parallel for 10/10 performance
+    const results = await Promise.allSettled(
+      campaigns.map(async (campaign) => {
+        try {
+          // Enforce per-owner context: campaigns without an owner are skipped
+          if (!campaign.ownerId) {
+            logger.warn('Skipping campaign without ownerId during cron sync', {
+              campaignId: campaign.id,
+              campaignName: campaign.name,
+            });
+            return {
+              campaignId: campaign.id,
+              campaignName: campaign.name,
+              success: false,
+              error:
+                'Campaign has no owner configured; cannot sync without per-user Google tokens.',
+            };
+          }
+
+          const result = await runDriveSync(
+            campaign.folderId,
+            campaign.id,
+            campaign.ownerId
+          );
+
+          // Update campaign stats with Absolute Truth (prisma.user.count)
+          const actualLeadCount = await prisma.user.count({
+            where: { campaignId: campaign.id, deletedAt: null },
+          });
+
+          await prisma.campaign.update({
+            where: { id: campaign.id },
+            data: {
+              totalLeads: actualLeadCount,
+            },
+          });
+
+          return {
             campaignId: campaign.id,
             campaignName: campaign.name,
-          });
-          results.push({
+            ...result,
+          };
+        } catch (error) {
+          logger.error(
+            'Failed to sync campaign during cron job',
+            error as Error,
+            {
+              campaignId: campaign.id,
+              campaignName: campaign.name,
+            }
+          );
+          return {
             campaignId: campaign.id,
             campaignName: campaign.name,
             success: false,
-            error:
-              'Campaign has no owner configured; cannot sync without per-user Google tokens.',
-          });
-          continue;
+            error: error instanceof Error ? error.message : 'Unknown error',
+          };
         }
+      })
+    );
 
-        const result = await runDriveSync(
-          campaign.folderId,
-          campaign.id,
-          campaign.ownerId
-        );
-
-        // Update campaign stats
-        await prisma.campaign.update({
-          where: { id: campaign.id },
-          data: {
-            totalLeads: {
-              increment: result.created.length,
-            },
-          },
-        });
-
-        results.push({
-          campaignId: campaign.id,
-          campaignName: campaign.name,
-          ...result,
-        });
-      } catch (error) {
-        logger.error('Failed to sync campaign during cron job', error as Error, {
-          campaignId: campaign.id,
-          campaignName: campaign.name,
-        });
-        results.push({
+    // Format settled results for the response
+    const formattedResults = results.map((res, index) => {
+      if (res.status === 'fulfilled') {
+        return res.value;
+      } else {
+        const campaign = campaigns[index];
+        return {
           campaignId: campaign.id,
           campaignName: campaign.name,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+          error:
+            res.reason instanceof Error ? res.reason.message : 'Unknown error',
+        };
       }
-    }
+    });
 
     return NextResponse.json({
       success: true,
       campaignsSynced: campaigns.length,
-      results,
+      results: formattedResults,
     });
   } catch (error) {
     logger.error('Cron job failed', error as Error);

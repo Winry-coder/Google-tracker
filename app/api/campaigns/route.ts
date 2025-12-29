@@ -155,36 +155,20 @@ export async function POST(request: Request) {
     const validated = createCampaignSchema.parse(body);
     console.log(`✅ Zod validation passed:`, validated);
 
-    // 2. Check for slug collision
+    // 2. Check for slug collision and handle with 10/10 slug generator
     console.log(`🔍 Checking slug collision for: ${validated.slug}`);
-    const existingSlug = await prisma.campaign.findFirst({
-      where: { slug: validated.slug, deletedAt: null },
+    let finalSlug = validated.slug;
+    const existingCampaign = await prisma.campaign.findFirst({
+      where: { slug: finalSlug, deletedAt: null },
     });
-    if (existingSlug) {
-      console.log(`❌ Slug collision found: ${validated.slug}`);
-      return NextResponse.json(
-        { error: 'A campaign with this slug already exists.' },
-        { status: 400 }
-      );
-    }
-    console.log(`✅ Slug available: ${validated.slug}`);
 
-    // 3. Check for folderId collision (scope to owner?? Maybe not, globally unique folder map is better for sync simplicity?)
-    // Let's allow multiple campaigns to track the same folder for now
-    // console.log(`🔍 Checking folder collision for: ${validated.folderId}`);
-    // const existingFolder = await prisma.campaign.findFirst({
-    //   where: { folderId: validated.folderId, deletedAt: null },
-    // });
-    // if (existingFolder) {
-    //   console.log(`❌ Folder collision found: ${validated.folderId} (campaign: ${existingFolder.name})`);
-    //   return NextResponse.json(
-    //     {
-    //       error: `This folder is already linked to campaign "${existingFolder.name}".`,
-    //     },
-    //     { status: 400 }
-    //   );
-    // }
-    // console.log(`✅ Folder available: ${validated.folderId}`);
+    if (existingCampaign) {
+      console.log(`⚠️ Slug collision found for "${finalSlug}", generating unique alternate...`);
+      // Append a short random ID (4 chars) to make it unique
+      const randomId = Math.random().toString(36).substring(2, 6);
+      finalSlug = `${validated.slug}-${randomId}`;
+      console.log(`✅ Generated unique slug: ${finalSlug}`);
+    }
 
     // 4. Drive Folder Validation (Crucial requirement)
     // Use user-specific validator
@@ -211,10 +195,11 @@ export async function POST(request: Request) {
 
     // 5. Create campaign
     console.log(`🔍 Creating campaign in database...`);
-    const { variants, ...campaignData } = validated;
+    const { variants, slug: _slug, ...campaignData } = validated; // Extract slug to use finalSlug instead
     const campaign = await prisma.campaign.create({
       data: {
         ...campaignData,
+        slug: finalSlug,
         ownerId: session.user.id,
         variants:
           variants && variants.length > 0
@@ -239,6 +224,16 @@ export async function POST(request: Request) {
         variants: true,
       },
     });
+
+    // 6. Register Smart Sync (Webhooks)
+    try {
+      const { registerFolderWatch } = await import('@/lib/google/watch');
+      await registerFolderWatch(campaign.id);
+    } catch (watchError) {
+      console.error('Failed to register initial webhook watch:', watchError);
+      // Don't fail the whole request, but maybe mark campaign?
+      // For now, just logging is enough as the cron job will still work.
+    }
 
     return NextResponse.json(
       {

@@ -34,7 +34,9 @@ export async function GET(
       paginationSchema.parse(params);
     const filters = userFiltersSchema.parse(params);
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = {
+      deletedAt: null, // Filter out soft-deleted users
+    };
 
     if (filters.status) {
       where.status = filters.status;

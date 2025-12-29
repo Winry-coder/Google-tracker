@@ -9,6 +9,7 @@ export const triggerSyncSchema = z.object({
   // If omitted, all active campaigns will be synced.
   campaignId: z.string().optional(),
   force: z.boolean().optional().default(false),
+  dryRun: z.boolean().optional().default(false),
 });
 
 export type TriggerSyncInput = z.infer<typeof triggerSyncSchema>;

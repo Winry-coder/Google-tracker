@@ -63,24 +63,52 @@ Go to: https://console.cloud.google.com/
 1. Go to: https://vercel.com
 2. Import your GitHub repository
 3. Go to **Settings → Environment Variables**
-4. Add these 7 variables:
+4. Add these essential variables:
 
 ```env
+# Core Authentication
 NEXTAUTH_SECRET = [from step 1]
 NEXTAUTH_URL = https://your-project.vercel.app
 GOOGLE_CLIENT_ID = [from step 2]
 GOOGLE_CLIENT_SECRET = [from step 2]
+
+# Database (Turso)
 TURSO_DATABASE_URL = [from step 3]
 TURSO_AUTH_TOKEN = [from step 3]
 DATABASE_URL = [from step 3]
+
+# Enterprise Reliability & Marketing
 TOKEN_ENCRYPTION_KEY = [from step 1]
 CRON_SECRET = [from step 1]
+RESEND_API_KEY = your_resend_api_key
 NEXT_PUBLIC_API_URL = https://your-project.vercel.app
 ```
 
 5. Click **Deploy**
 6. Wait 3-5 minutes for build
 7. Click production URL when ready ✅
+
+---
+
+## 🏗️ Phase 4: Enterprise "Perfect 10" Setup
+
+To fully enable the high-reliability features, ensure the following are configured:
+
+### **1. Automated Retries & Health Checks**
+The system automatically monitors Google Token health. To enable the **Retry Engine**, ensure your `CRON_SECRET` is set and configure a cron job (e.g., via Vercel Cron or EasyCron) to hit:
+`https://yourdomain.com/api/access/retry?secret=YOUR_CRON_SECRET`
+
+### **2. Email Automation (Resend)**
+1. Create a free account at [Resend](https://resend.com).
+2. Generate an API Key.
+3. Add `RESEND_API_KEY` to your environment variables.
+4. Emails will now be sent automatically when leads are captured.
+
+### **3. Real-time Webhooks (Smart Sync)**
+The application uses Google Drive Webhooks for instant updates.
+1. Ensure `NEXT_PUBLIC_API_URL` matches your production domain.
+2. The app will automatically attempt to register webhooks when you create a new campaign.
+3. Note: Webhooks require a publicly accessible URL (will not work on `localhost`).
 
 ---
 

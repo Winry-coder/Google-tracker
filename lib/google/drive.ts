@@ -78,16 +78,18 @@ export async function grantPermission(
   const drive = google.drive({ version: 'v3', auth: client });
 
   try {
-    const response = await drive.permissions.create({
-      fileId: folderId,
-      requestBody: {
-        role: 'reader',
-        type: 'user',
-        emailAddress: email,
-      },
-      fields: 'id',
-      sendNotificationEmail: true,
-    });
+    const response = await fetchWithRetry(() =>
+      drive.permissions.create({
+        fileId: folderId,
+        requestBody: {
+          role: 'reader',
+          type: 'user',
+          emailAddress: email,
+        },
+        fields: 'id',
+        sendNotificationEmail: true,
+      })
+    );
 
     return { id: response.data.id || '' };
   } catch (error) {
@@ -109,10 +111,12 @@ export async function revokePermission(
   const drive = google.drive({ version: 'v3', auth: client });
 
   try {
-    await drive.permissions.delete({
-      fileId,
-      permissionId,
-    });
+    await fetchWithRetry(() =>
+      drive.permissions.delete({
+        fileId,
+        permissionId,
+      })
+    );
   } catch (error) {
     throw new GoogleAPIError(
       `Failed to revoke permission ${permissionId} on file/folder ${fileId}`,
@@ -167,6 +171,35 @@ export async function fetchAllPermissionsForUser(
 }
 
 /**
+ * Simple Circuit Breaker for Google Drive API
+ */
+let consecutiveFailures = 0;
+const FAILURE_THRESHOLD = 3;
+let lastFailureTime = 0;
+const COOLDOWN_PERIOD = 30000; // 30 seconds
+
+function checkCircuitBreaker() {
+  if (consecutiveFailures >= FAILURE_THRESHOLD) {
+    const now = Date.now();
+    if (now - lastFailureTime < COOLDOWN_PERIOD) {
+      throw new Error('Google Drive API is currently in "Queue Mode" due to consecutive failures. Please try again in a few moments.');
+    } else {
+      // Cooldown finished, try again
+      consecutiveFailures = 0;
+    }
+  }
+}
+
+function recordSuccess() {
+  consecutiveFailures = 0;
+}
+
+function recordFailure() {
+  consecutiveFailures++;
+  lastFailureTime = Date.now();
+}
+
+/**
  * Grants permission for a specific user context
  */
 export async function grantPermissionForUser(
@@ -174,22 +207,27 @@ export async function grantPermissionForUser(
   folderId: string,
   email: string
 ): Promise<{ id: string }> {
+  checkCircuitBreaker();
   const drive = await getDriveForUser(userId);
 
   try {
-    const response = await drive.permissions.create({
-      fileId: folderId,
-      requestBody: {
-        role: 'reader',
-        type: 'user',
-        emailAddress: email,
-      },
-      fields: 'id',
-      sendNotificationEmail: true,
-    });
+    const response = await fetchWithRetry(() =>
+      drive.permissions.create({
+        fileId: folderId,
+        requestBody: {
+          role: 'reader',
+          type: 'user',
+          emailAddress: email,
+        },
+        fields: 'id',
+        sendNotificationEmail: true,
+      })
+    );
 
+    recordSuccess();
     return { id: response.data.id || '' };
   } catch (error) {
+    recordFailure();
     throw new GoogleAPIError(
       `Failed to grant permission for email ${email} on folder ${folderId}`,
       (error as { code?: number }).code,
@@ -209,10 +247,12 @@ export async function revokePermissionForUser(
   const drive = await getDriveForUser(userId);
 
   try {
-    await drive.permissions.delete({
-      fileId,
-      permissionId,
-    });
+    await fetchWithRetry(() =>
+      drive.permissions.delete({
+        fileId,
+        permissionId,
+      })
+    );
   } catch (error) {
     throw new GoogleAPIError(
       `Failed to revoke permission ${permissionId} on file/folder ${fileId}`,

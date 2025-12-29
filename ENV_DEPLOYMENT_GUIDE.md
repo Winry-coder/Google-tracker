@@ -26,6 +26,7 @@ This guide walks you through configuring every environment variable needed to de
 - [ ] `SLACK_WEBHOOK_URL` - Lead notifications
 - [ ] `RESEND_API_KEY` - Email service
 - [ ] `CLEARBIT_API_KEY` - Lead enrichment
+- [ ] `NEXT_PUBLIC_API_URL` - Your production domain (required for webhooks)
 
 ### **Not Needed for Basic Deployment**
 - [ ] `GOOGLE_REDIRECT_URI` - Handled by NextAuth automatically

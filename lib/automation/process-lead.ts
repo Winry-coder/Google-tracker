@@ -59,7 +59,7 @@ export async function processLeadAutomation(user: User, campaignId?: string) {
       });
     }
 
-    // 4. External Webhook (Zapier/CRM)
+    // 4. External Webhook (Zapier/CRM/Make)
     if (campaign?.webhookUrl) {
       fetch(campaign.webhookUrl, {
         method: 'POST',
@@ -72,6 +72,9 @@ export async function processLeadAutomation(user: User, campaignId?: string) {
             email: user.email,
             name: user.name,
             source: user.source,
+            company: user.company,
+            jobTitle: user.jobTitle,
+            linkedinUrl: user.linkedinUrl,
           },
           campaign: {
             id: campaign.id,
@@ -82,7 +85,7 @@ export async function processLeadAutomation(user: User, campaignId?: string) {
       }).catch((err) => {
         if (process.env.NODE_ENV === 'development') {
           // eslint-disable-next-line no-console
-          console.error('Webhook failed:', err);
+          console.error('External Webhook failed:', err);
         }
       });
     }
