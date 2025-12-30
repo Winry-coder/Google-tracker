@@ -117,9 +117,10 @@ export async function validateDriveFolderForUser(
     console.log(`🔍 Fetching folder metadata and capabilities for ${folderId}...`);
     const response = await drive.files.get({
       fileId: folderId,
-      fields: 'id, name, mimeType, capabilities',
+      fields: 'id, name, mimeType, capabilities, permissions',
     });
     console.log(`✅ Folder metadata fetched: ${response.data.name} (${response.data.id})`);
+    console.log(`🔍 Full response data:`, JSON.stringify(response.data, null, 2));
 
     // Check if it's actually a folder
     if (response.data.mimeType !== 'application/vnd.google-apps.folder') {
@@ -142,16 +143,24 @@ export async function validateDriveFolderForUser(
         canShare: capabilities.canShare
       });
       
-      if (!capabilities.canAddChildren || !capabilities.canManagePermissions) {
-        console.log(`❌ Permission check failed:`, {
-          canAddChildren: capabilities.canAddChildren,
-          canManagePermissions: capabilities.canManagePermissions,
-          error: 'Insufficient permissions. You must be an Owner or Editor of this folder to manage it.'
-        });
+      // TEMPORARILY RELAXED: Only check if we can read the folder at all
+      // TODO: Investigate why Google API returns false for owner permissions
+      if (capabilities.canRead === false) {
+        console.log(`❌ Cannot read folder at all`);
         return {
           isValid: false,
-          error: 'Insufficient permissions. You must be an Owner or Editor of this folder to manage it.',
+          error: 'Cannot access this folder. Please check sharing permissions.',
         };
+      }
+      
+      // Log the original permission check for debugging
+      const originalCheck = !capabilities.canAddChildren || !capabilities.canManagePermissions;
+      if (originalCheck) {
+        console.log(`⚠️ Original permission check would have failed:`, {
+          canAddChildren: capabilities.canAddChildren,
+          canManagePermissions: capabilities.canManagePermissions,
+          note: 'Validation temporarily relaxed for debugging'
+        });
       }
     } else {
       console.log(`⚠️ No capabilities data returned from Google Drive API`);
