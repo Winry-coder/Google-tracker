@@ -131,13 +131,30 @@ export async function validateDriveFolderForUser(
 
     // Boss Level Improvement: Folder Ownership/Permissions Verification
     const capabilities = response.data.capabilities as Record<string, boolean | undefined | null>;
+    console.log(`🔍 Folder capabilities for ${response.data.name}:`, JSON.stringify(capabilities, null, 2));
+    
     if (capabilities) {
+      console.log(`🔍 Permission checks:`, {
+        canAddChildren: capabilities.canAddChildren,
+        canManagePermissions: capabilities.canManagePermissions,
+        canEdit: capabilities.canEdit,
+        canDelete: capabilities.canDelete,
+        canShare: capabilities.canShare
+      });
+      
       if (!capabilities.canAddChildren || !capabilities.canManagePermissions) {
+        console.log(`❌ Permission check failed:`, {
+          canAddChildren: capabilities.canAddChildren,
+          canManagePermissions: capabilities.canManagePermissions,
+          error: 'Insufficient permissions. You must be an Owner or Editor of this folder to manage it.'
+        });
         return {
           isValid: false,
           error: 'Insufficient permissions. You must be an Owner or Editor of this folder to manage it.',
         };
       }
+    } else {
+      console.log(`⚠️ No capabilities data returned from Google Drive API`);
     }
 
     // Try to fetch permissions to see if we can read them (optional check)
