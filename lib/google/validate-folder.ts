@@ -138,32 +138,46 @@ export async function validateDriveFolderForUser(
       console.log(`🔍 Permission checks:`, {
         canAddChildren: capabilities.canAddChildren,
         canManagePermissions: capabilities.canManagePermissions,
+        canShare: capabilities.canShare,
         canEdit: capabilities.canEdit,
-        canDelete: capabilities.canDelete,
-        canShare: capabilities.canShare
+        canDelete: capabilities.canDelete
       });
       
-      // TEMPORARILY RELAXED: Only check if we can read the folder at all
-      // TODO: Investigate why Google API returns false for owner permissions
-      if (capabilities.canRead === false) {
-        console.log(`❌ Cannot read folder at all`);
+      // Check for required permissions with detailed error messages
+      const missingPermissions = [];
+      
+      if (!capabilities.canAddChildren) {
+        missingPermissions.push('Add files/folders to the folder');
+      }
+      
+      // Note: Google Drive API uses canShare instead of canManagePermissions
+      const canManagePermissions = capabilities.canManagePermissions || capabilities.canShare;
+      if (!canManagePermissions) {
+        missingPermissions.push('Manage folder permissions');
+      }
+      
+      if (missingPermissions.length > 0) {
+        console.log(`❌ Permission check failed:`, {
+          canAddChildren: capabilities.canAddChildren,
+          canManagePermissions: capabilities.canManagePermissions,
+          canShare: capabilities.canShare,
+          missingPermissions,
+          error: 'Insufficient permissions for campaign management'
+        });
+        
         return {
           isValid: false,
-          error: 'Cannot access this folder. Please check sharing permissions.',
+          error: `Insufficient permissions for campaign management. You need:\n• ${missingPermissions.join('\n• ')}\n\nTo fix this:\n1. Go to Google Drive\n2. Right-click the folder\n3. Share → Advanced\n4. Make sure your role is "Owner" or "Editor"\n5. Try creating the campaign again`,
         };
       }
       
-      // Log the original permission check for debugging
-      const originalCheck = !capabilities.canAddChildren || !capabilities.canManagePermissions;
-      if (originalCheck) {
-        console.log(`⚠️ Original permission check would have failed:`, {
-          canAddChildren: capabilities.canAddChildren,
-          canManagePermissions: capabilities.canManagePermissions,
-          note: 'Validation temporarily relaxed for debugging'
-        });
-      }
+      console.log(`✅ All required permissions verified`);
     } else {
-      console.log(`⚠️ No capabilities data returned from Google Drive API`);
+      console.log(`❌ No capabilities data returned from Google Drive API`);
+      return {
+        isValid: false,
+        error: 'Unable to verify folder permissions. Please try again or contact support.',
+      };
     }
 
     // Try to fetch permissions to see if we can read them (optional check)
